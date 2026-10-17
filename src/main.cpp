@@ -10,17 +10,22 @@
 //   used pre|mem <gal>         overwrite a filter's used gallons (one-off correction)
 //   reset                      zero water counters (Today, 7 days, All); filters untouched
 //   inject <inGal> <outGal>    TEST: add volume as if measured
-//   save | reboot | wipe yes   force NVS save / restart / erase all stored data
+//   hang                       TEST: spin forever; the watchdog should reboot
+//   save | reboot | hang | wipe yes   force NVS save / restart / erase all stored data
 #include <Arduino.h>
+#include <esp_task_wdt.h>
 #include "clock.h"
 #include "config.h"
 #include "counters.h"
 #include "flow.h"
 #include "ha_mqtt.h"
 #include "net.h"
+#include "ota.h"
 #include "store.h"
 #include "tds.h"
 #include "web.h"
+
+void enableLoopWDT();  // Arduino core
 
 static Counters &counters = store::counters;
 static Calibration &cal = store::cal;
@@ -160,12 +165,16 @@ static void handleCommand(String line) {
     store::saveNow();
     Serial.flush();
     ESP.restart();
+  } else if (line == "hang") {
+    Serial.println("# hanging loop() to test the watchdog");
+    Serial.flush();
+    for (;;) {}
   } else if (line == "wipe yes") {
     store::wipe();
     Serial.println("# NVS wiped, defaults loaded");
   } else {
     Serial.println("# commands: s | r | g | k in|out <ppg> | t <ppm> | filter pre|mem <date> [gal] | "
-                   "used pre|mem <gal> | reset | inject <in> <out> | save | reboot | wipe yes");
+                   "used pre|mem <gal> | reset | inject <in> <out> | save | reboot | hang | wipe yes");
   }
 }
 
@@ -212,6 +221,10 @@ void setup() {
   web::begin();
   ha::begin();
   printStatus();
+
+  // Hardware-backed task watchdog on loop(): a hang reboots the board. Counting resumes from NVS.
+  esp_task_wdt_init(WDT_TIMEOUT_S, true);
+  enableLoopWDT();
 }
 
 void loop() {
@@ -219,6 +232,7 @@ void loop() {
   tds::update(now);
   net::loop(now);
   ha::loop(now);
+  ota::loop();
   pollSerial();
 
   if (now - lastFlowMs >= FLOW_SAMPLE_MS) {

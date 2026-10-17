@@ -19,6 +19,7 @@ static bool mdnsUp = false;
 static uint32_t bootMs = 0;
 static uint32_t nextAttemptMs = 0;
 static uint32_t backoffMs = WIFI_RETRY_MIN_MS;
+static uint32_t downSinceMs = 0;
 
 static void startMdns() {
   if (mdnsUp) return;
@@ -72,6 +73,7 @@ void loop(uint32_t now) {
     Serial.printf("[net] connected, IP %s, RSSI %d dBm\n", WiFi.localIP().toString().c_str(),
                   WiFi.RSSI());
     everConnected = true;
+    downSinceMs = 0;
     backoffMs = WIFI_RETRY_MIN_MS;
     clk::startNtp();
     startMdns();
@@ -79,9 +81,23 @@ void loop(uint32_t now) {
   } else if (!up && wasConnected) {
     Serial.println("[net] Wi-Fi lost");
     nextAttemptMs = now + 1000;  // first retry quickly, then back off
+    downSinceMs = now;
   }
   wasConnected = up;
   if (up) return;
+
+  if (!wasConnected && downSinceMs == 0) downSinceMs = now ? now : 1;
+
+  // Long outage: bounce the radio instead of rebooting (reboots would not fix the router anyway).
+  if (now - downSinceMs >= WIFI_RADIO_RESET_MS) {
+    Serial.println("[net] down for a long time, restarting Wi-Fi radio");
+    WiFi.disconnect(true, false);
+    WiFi.mode(ap ? WIFI_AP_STA : WIFI_STA);
+    WiFi.setHostname(MDNS_HOSTNAME);
+    downSinceMs = now;
+    backoffMs = WIFI_RETRY_MIN_MS;
+    nextAttemptMs = now;
+  }
 
   if ((int32_t)(now - nextAttemptMs) >= 0) attempt(now);
 

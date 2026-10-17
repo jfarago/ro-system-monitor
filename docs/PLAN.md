@@ -288,8 +288,8 @@ Notes for Phase 3:
 ### Phase 5: Hardening
 > **Model: Sonnet** for OTA and the watchdog. **Opus** for reboot-loop or recovery debugging.
 
-- [ ] OTA updates (password protected)
-- [ ] Hardware watchdog; recover from Wi-Fi/MQTT loss without reboot loops
+- [x] OTA updates (password protected): ArduinoOTA (`pio run -t upload --upload-port ro-monitor.local`, auth `OTA_PASSWORD`) and `/update` page (user `admin`, same password; firmware or `?type=fs`). Builds; not yet tested on hardware
+- [x] Hardware watchdog (15 s task WDT on `loop()`, serial `hang` command tests it); Wi-Fi down 10 min restarts the radio, MQTT reconnects with backoff, neither reboots. Not yet tested on hardware
 - [ ] Optional: calibrate K-factors in place (measure 1 gal at faucet, adjust `kOut`; compare long-run in/out ratio against the system's expected ~1:3 to sanity-check `kIn`)
 - [ ] Optional: DS18B20 temperature compensation for TDS
 - [ ] Tag `v1.0.0`

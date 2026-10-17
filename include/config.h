@@ -35,6 +35,11 @@ constexpr uint32_t WIFI_FALLBACK_AP_AFTER_MS = 120000;
 constexpr uint32_t WIFI_RETRY_MIN_MS = 10000;  // reconnect backoff 10 s, 20 s, 40 s, capped at 60 s
 constexpr uint32_t WIFI_RETRY_MAX_MS = 60000;
 
+// Watchdog: loop() must come around within this, or the board reboots. Longest legit stall is an
+// MQTT connect (3 s socket timeout) or an NVS save; OTA transfers feed it explicitly.
+constexpr uint32_t WDT_TIMEOUT_S = 15;
+constexpr uint32_t WIFI_RADIO_RESET_MS = 600000;  // Wi-Fi down this long: restart the radio (never reboot)
+
 // Intervals
 constexpr uint32_t FLOW_SAMPLE_MS = 1000;
 constexpr uint32_t FLOW_ACTIVE_MS = 3000;      // "flowing" = pulses within this window

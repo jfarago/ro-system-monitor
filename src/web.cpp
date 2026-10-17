@@ -6,6 +6,7 @@
 #include "clock.h"
 #include "config.h"
 #include "net.h"
+#include "ota.h"
 #include "store.h"
 #include "tds.h"
 
@@ -226,6 +227,8 @@ void begin() {
   server.on("/api/settings", HTTP_POST, handleSettings, nullptr, collectBody);
   server.on("/api/calibration", HTTP_POST, handleCalibration, nullptr, collectBody);
   server.on("/api/reset-counters", HTTP_POST, handleReset);
+
+  ota::begin(server);
 
   // Gzipped assets: the server serves /x.gz for /x and adds Content-Encoding itself.
   server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html").setCacheControl("no-cache");
