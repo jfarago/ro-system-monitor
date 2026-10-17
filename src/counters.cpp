@@ -167,9 +167,23 @@ Totals Counters::today(uint32_t today) const {
   return {b.outGal, clampWaste(b.inGal, b.outGal)};
 }
 
-Totals Counters::week(uint32_t today) const {
+Totals Counters::week(uint32_t today) const { return lastDays(7, today); }
+Totals Counters::month(uint32_t today) const { return lastDays(30, today); }
+
+void Counters::migrateDaysV1(const DaysStateV1 &old) {
+  defaultDays();
+  for (int i = 0; i < NUM_DAYS_V1; i++) days.days[i] = old.days[i];
+  days.pendIn = old.pendIn;
+  days.pendOut = old.pendOut;
+  if (isValidDate(days.days[0].date)) {
+    for (int i = NUM_DAYS_V1; i < NUM_DAYS; i++)
+      days.days[i].date = daysToDate(dateToDays(days.days[0].date) - i);
+  }
+}
+
+Totals Counters::lastDays(int n, uint32_t today) const {
   double in = 0, out = 0;
-  for (int i = 0; i < 7; i++) {
+  for (int i = 0; i < n && i < NUM_DAYS; i++) {
     in += days.days[i].inGal;
     out += days.days[i].outGal;
   }

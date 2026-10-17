@@ -52,6 +52,7 @@ static void sendStatus(AsyncWebServerRequest *req) {
     JsonObject v = doc["volume"].to<JsonObject>();
     putTotals(v["today"].to<JsonObject>(), c.today(today));
     putTotals(v["week"].to<JsonObject>(), c.week(today));
+    putTotals(v["month"].to<JsonObject>(), c.month(today));
     putTotals(v["all"].to<JsonObject>(), c.all());
 
     clk::formatDate(c.cnt.since, buf, sizeof buf);

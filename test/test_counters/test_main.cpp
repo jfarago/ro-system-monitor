@@ -24,6 +24,7 @@ static void test_first_sync_dates_ring_and_fills_since() {
   c.tick(20261017);
   TEST_ASSERT_EQUAL_UINT32(20261017, c.days.days[0].date);
   TEST_ASSERT_EQUAL_UINT32(20261010, c.days.days[7].date);
+  TEST_ASSERT_EQUAL_UINT32(20260918, c.days.days[NUM_DAYS - 1].date);
   TEST_ASSERT_EQUAL_UINT32(20261017, c.cnt.since);
   TEST_ASSERT_EQUAL_UINT32(20261017, c.pre.installDate);
   TEST_ASSERT_EQUAL_UINT32(20261017, c.mem.installDate);
@@ -72,16 +73,37 @@ static void test_gap_fills_zero_days() {
 }
 
 static void test_week_excludes_eighth_day() {
-  for (uint32_t d = 20261010; d <= 20261017; d++) c.addFlow(1.0, 1.0, d);
+  for (uint32_t d = 20261010; d <= 20261017; d++) c.addFlow(1.0, 1.0, d);  // 8 consecutive days
   TEST_ASSERT_EQUAL_DOUBLE(7.0, c.week(20261017).clean);
   TEST_ASSERT_EQUAL_DOUBLE(8.0, c.all().clean);
 }
 
+static void test_month_is_30_days() {
+  for (int i = 0; i < 31; i++) c.addFlow(1.0, 1.0, daysToDate(dateToDays(20260901) + i));  // 09-01..10-01
+  TEST_ASSERT_EQUAL_DOUBLE(30.0, c.month(20261001).clean);  // 31st-oldest day (09-01) falls out
+  TEST_ASSERT_EQUAL_DOUBLE(7.0, c.week(20261001).clean);
+  TEST_ASSERT_EQUAL_DOUBLE(31.0, c.all().clean);
+}
+
+static void test_migrate_v1_ring() {
+  DaysStateV1 old = {};
+  old.version = 1;
+  for (int i = 0; i < NUM_DAYS_V1; i++) old.days[i] = {daysToDate(dateToDays(20261017) - i), 2.0, 1.0};
+  old.pendIn = 0.5;
+  c.migrateDaysV1(old);
+  TEST_ASSERT_EQUAL_UINT16(DAYS_STATE_VERSION, c.days.version);
+  TEST_ASSERT_EQUAL_DOUBLE(1.0, c.days.days[7].outGal);
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, c.days.days[8].outGal);
+  TEST_ASSERT_EQUAL_UINT32(20260918, c.days.days[NUM_DAYS - 1].date);
+  TEST_ASSERT_EQUAL_DOUBLE(0.5, c.days.pendIn);
+  TEST_ASSERT_EQUAL_DOUBLE(8.0, c.month(20261017).clean);
+}
+
 static void test_long_gap_clears_ring() {
   c.addFlow(2.0, 1.0, 20261017);
-  c.tick(20261117);
+  c.tick(20261217);  // 61 days
   for (int i = 0; i < NUM_DAYS; i++) TEST_ASSERT_EQUAL_DOUBLE(0.0, c.days.days[i].inGal);
-  TEST_ASSERT_EQUAL_UINT32(20261110, c.days.days[7].date);
+  TEST_ASSERT_EQUAL_UINT32(20261118, c.days.days[NUM_DAYS - 1].date);
   TEST_ASSERT_EQUAL_DOUBLE(2.0, c.cnt.allIn);
 }
 
@@ -168,6 +190,8 @@ int main() {
   RUN_TEST(test_midnight_rollover);
   RUN_TEST(test_gap_fills_zero_days);
   RUN_TEST(test_week_excludes_eighth_day);
+  RUN_TEST(test_month_is_30_days);
+  RUN_TEST(test_migrate_v1_ring);
   RUN_TEST(test_long_gap_clears_ring);
   RUN_TEST(test_rollover_across_month_and_dst);
   RUN_TEST(test_pending_before_sync);

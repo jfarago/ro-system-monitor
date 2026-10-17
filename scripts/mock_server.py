@@ -11,7 +11,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 UI = os.path.join(os.path.dirname(__file__), "..", "ui")
 START = time.time()
 state = {
-    "volume": {"today": [4.9, 10.9], "week": [33.5, 76.5], "all": [1271.3, 2915.7]},
+    "volume": {"today": [4.9, 10.9], "week": [33.5, 76.5], "month": [141.2, 318.9], "all": [1271.3, 2915.7]},
     "filters": {
         "prefilter": {"installDate": "2026-06-02", "ratingGal": 1500, "usedGal": 912, "counts": "total"},
         "membrane": {"installDate": "2026-01-15", "ratingGal": 3000, "usedGal": 1046, "counts": "total"},

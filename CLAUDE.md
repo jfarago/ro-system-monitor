@@ -13,16 +13,19 @@ Firmware + web dashboard for a 4-stage under-sink RO system on a Seeed XIAO ESP3
 - Build: `pio run 2>&1 | tail -20`
 - Flash: `pio run -t upload 2>&1 | tail -20`
 - Upload UI (LittleFS): `pio run -t uploadfs 2>&1 | tail -20`
+- Dev UI without hardware: `python3 scripts/mock_server.py`
 - Host unit tests (counter logic): `pio test -e native 2>&1 | tail -25`
 - Serial monitor: `pio device monitor 2>&1 | grep -v '^$' | tail -50` (or run with a timeout)
 - Always pipe build/monitor output through `tail`/`grep`.
 
 ## Layout
-`src/` firmware, `include/config.h` pins/defaults, `include/secrets.h` (gitignored, copy from `secrets.example.h`), `ui/` production dashboard (Phase 3), `data/` generated gzipped UI (gitignored), `web/` design mockup (reference only), `docs/`.
+`src/` firmware, `include/config.h` pins/defaults, `include/secrets.h` (gitignored, copy from `secrets.example.h`), `ui/` production dashboard (vanilla HTML/CSS/JS), `scripts/` (`build_ui.py` gzips `ui/` into `data/` on every build; `mock_server.py` serves `ui/` with fake data at localhost:8080), `data/` generated gzipped UI (gitignored), `test/` host unit tests, `web/` design mockup (reference only), `docs/`.
 
 ## Rules
 - **Waste = in − out** (GPIO2 minus GPIO4), clamped at >= 0. Total = in, clean = out.
 - **Membrane counter counts total water** (same as prefilters). Switch: `MEMBRANE_COUNTS_TOTAL` in `config.h`.
 - Do not read `web/vendor/` or `web/support.js` (large, minified; also deny-listed in `.claude/settings.json`). `web/Main.dc.html` is the design reference.
+- Water periods: Today, 7 days, 30 days (ring of `NUM_DAYS` = 30 buckets), All. Changing the `DaysState` layout needs a version bump plus a migration so stored history survives.
+- Web handlers run on another task: hold `store::Lock` when touching `store::counters` / `store::cal`.
 - Never commit `include/secrets.h`.
 - Phase 1 is blocked until the flow sensor signal voltage is measured (PLAN §2.1).

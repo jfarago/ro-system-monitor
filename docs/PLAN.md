@@ -116,9 +116,10 @@ ro-system-monitor/
 
 ### 4.3 Time and periods
 - Call `configTzTime(TZ, "pool.ntp.org", "time.google.com")`. The TZ string in `config.h` is `EST5EDT,M3.2.0,M11.1.0` (US Eastern, North Carolina).
-- **Daily buckets:** a ring of 8 `{ yyyymmdd, in_gal, out_gal }` entries (today + 7 previous days).
+- **Daily buckets:** a ring of 30 `{ yyyymmdd, in_gal, out_gal }` entries (today + 29 previous days).
   - **Today** = the current bucket.
   - **7 days** = the sum of today + the previous 6.
+  - **30 days** = the sum of today + the previous 29.
   - **All** = all-time accumulators since the last reset.
 - **Midnight rollover:** the loop compares the current local date with the newest bucket's date. When the date changes, it opens a new bucket and drops the oldest. Missing days, for example while the board was powered off, are filled with zero buckets.
 - **Before NTP sync** (on boot with no Wi-Fi), volume still goes into the all-time totals and filter counters, and is held in a pending bucket that goes into "Today" once the time is valid. The UI shows "Time not synced" in place of dates.
@@ -147,7 +148,7 @@ ro-system-monitor/
 |---|---|---|
 | GET | `/api/status` | Full dashboard state (below) |
 | POST | `/api/settings` | `{ prefilter:{installDate,ratingGal}, membrane:{installDate,ratingGal} }`; changed date resets that group's used counter |
-| POST | `/api/reset-counters` | Zero every water period (Today, 7 days, All), set `countingSince = now`; filter counters untouched |
+| POST | `/api/reset-counters` | Zero every water period (Today, 7 days, 30 days, All), set `countingSince = now`; filter counters untouched |
 | GET/POST | `/api/calibration` | `{ kIn, kOut, kTds, waterTempC }`. Not in the UI; for setup/curl |
 | GET | `/` and static | Gzipped UI from LittleFS (`Content-Encoding: gzip`) |
 | — | `/update` | OTA firmware/filesystem upload (password protected) |
@@ -160,6 +161,7 @@ ro-system-monitor/
   "volume": {
     "today": { "clean": 4.9,   "waste": 10.9 },
     "week":  { "clean": 33.5,  "waste": 76.5 },
+    "month": { "clean": 141.2, "waste": 318.9 },
     "all":   { "clean": 1271.3,"waste": 2915.7 }
   },
   "countingSince": "2026-01-15",
@@ -199,7 +201,7 @@ Entities (`homeassistant/<component>/ro_monitor/<object>/config`):
 | Total water (all-time) | sensor | gal, `water`, `total_increasing` | |
 | Waste water (all-time) | sensor | gal, `water`, `total_increasing` | |
 | Clean / Waste / Total today | sensor | gal | |
-| Clean / Waste / Total 7 days | sensor | gal | |
+| Clean / Waste / Total 7 days / 30 days | sensor | gal | |
 | Prefilter used / life left | sensor | % / gal | |
 | Membrane used / life left | sensor | % / gal | |
 | Prefilter / Membrane status | sensor | text | Good / Replace soon / Replace now |
@@ -257,14 +259,15 @@ Entities (`homeassistant/<component>/ro_monitor/<object>/config`):
 
 - [x] Wi-Fi STA + reconnect + fallback AP; mDNS `ro-monitor.local` (STA + mDNS verified on hardware; fallback AP not yet exercised)
 - [x] NTP + TZ; time-valid flag
-- [x] Counters: all-time, 8-day bucket ring, midnight rollover, pre-sync pending bucket (pure C++ in `counters.cpp`, host tests in `test/test_counters`)
+- [x] 30-day period added after Phase 3: ring grew 8 → 30 buckets, NVS `days` blob v2 with migration from v1 (host-tested; migration not yet exercised on hardware)
+- [x] Counters: all-time, 30-day bucket ring, midnight rollover, pre-sync pending bucket (pure C++ in `counters.cpp`, host tests in `test/test_counters`)
 - [x] Filter-life groups with install-date reset rule
 - [x] NVS store with batched writes; reset tests (counts survive, unsaved changes < 60 s are the only loss). Tested with chip reset (RTS) and `ESP.restart()`; a real unplug test is still worth doing
 
 Notes for Phase 3:
 - The async web server runs its handlers on another task, so reads/writes of `store::counters` and `store::cal` from handlers need a mutex (or queue the change to `loop()`).
 - An install date that was never set is filled with the first synced date, the same as `countingSince`.
-- While the clock is not valid, "Today" shows only the pending bucket, and "7 days" is the stored ring plus pending.
+- While the clock is not valid, "Today" shows only the pending bucket, and "7 days" / "30 days" are the stored ring plus pending.
 
 ### Phase 3: API + dashboard
 > **Model: Sonnet.** The UI port from the mockup is mostly translation and is a good fit for a Sonnet subagent.
@@ -273,7 +276,7 @@ Notes for Phase 3:
 - [x] Build `ui/` from the mockup, wire to API, polling + connection state
 - [x] Settings modal: dates/ratings save, reset confirmation flow
 - [x] UI build script → gzipped LittleFS; `uploadfs`
-- [ ] Test on phone over home Wi-Fi
+- [x] Test on phone over home Wi-Fi
 
 ### Phase 4: Home Assistant
 > **Model: Sonnet.**

@@ -42,13 +42,22 @@ void begin() {
   defaultCal();
   bool okCnt = loadBlob("cnt", c.cnt, COUNT_STATE_VERSION);
   bool okDays = loadBlob("days", c.days, DAYS_STATE_VERSION);
+  bool migrated = false;
+  if (!okDays && prefs.getBytesLength("days") == sizeof(DaysStateV1)) {  // 8-day ring from before 30 days
+    DaysStateV1 old;
+    prefs.getBytes("days", &old, sizeof old);
+    if (old.version == 1) {
+      c.migrateDaysV1(old);
+      migrated = true;
+    }
+  }
   bool okPre = loadBlob("pre", c.pre, FILTER_GROUP_VERSION);
   bool okMem = loadBlob("mem", c.mem, FILTER_GROUP_VERSION);
   bool okCal = loadBlob("cal", cal, CALIBRATION_VERSION);
-  Serial.printf("[store] loaded cnt=%d days=%d pre=%d mem=%d cal=%d (0 = defaults)\n",
-                okCnt, okDays, okPre, okMem, okCal);
+  Serial.printf("[store] loaded cnt=%d days=%d%s pre=%d mem=%d cal=%d (0 = defaults)\n",
+                okCnt, okDays, migrated ? " (migrated from v1)" : "", okPre, okMem, okCal);
   // Write defaults for anything missing so a fresh board has a full set of keys.
-  dirty = (okCnt ? 0 : DIRTY_CNT) | (okDays ? 0 : DIRTY_DAYS) | (okPre ? 0 : DIRTY_PRE) |
+  dirty = (okCnt ? 0 : DIRTY_CNT) | ((okDays && !migrated) ? 0 : DIRTY_DAYS) | (okPre ? 0 : DIRTY_PRE) |
           (okMem ? 0 : DIRTY_MEM) | (okCal ? 0 : DIRTY_CAL);
   if (dirty) saveNow();
 }

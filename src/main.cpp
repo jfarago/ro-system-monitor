@@ -42,7 +42,7 @@ static void printStatus() {
   clk::formatDate(counters.cnt.since, since, sizeof since);
   clk::formatDate(counters.pre.installDate, preD, sizeof preD);
   clk::formatDate(counters.mem.installDate, memD, sizeof memD);
-  Totals t = counters.today(today), w = counters.week(today), a = counters.all();
+  Totals t = counters.today(today), w = counters.week(today), m = counters.month(today), a = counters.all();
   float ppm = tds::ppm(cal.kTds, cal.waterTempC);
 
   Serial.printf("time %s (%s) | uptime %lu s | wifi %s%s rssi %d | flowing %d\n",
@@ -52,11 +52,11 @@ static void printStatus() {
   Serial.printf("tds %.1f ppm (%lu mV) rejection %.1f%% | K in %.0f out %.0f kTds %.3f T %.1fC\n", ppm,
                 (unsigned long)tds::medianMv(), tds::rejectionPct(ppm), cal.kIn, cal.kOut, cal.kTds,
                 cal.waterTempC);
-  Serial.printf("today clean %.3f waste %.3f | week clean %.3f waste %.3f | all clean %.3f waste %.3f | since %s\n",
-                t.clean, t.waste, w.clean, w.waste, a.clean, a.waste, since[0] ? since : "(at sync)");
+  Serial.printf("today clean %.3f waste %.3f | week clean %.3f waste %.3f | 30d clean %.3f waste %.3f | all clean %.3f waste %.3f | since %s\n",
+                t.clean, t.waste, w.clean, w.waste, m.clean, m.waste, a.clean, a.waste, since[0] ? since : "(at sync)");
   Serial.printf("pending in %.3f out %.3f | allIn %.3f allOut %.3f\n", counters.days.pendIn,
                 counters.days.pendOut, counters.cnt.allIn, counters.cnt.allOut);
-  for (int i = 0; i < NUM_DAYS; i++) {
+  for (int i = 0; i < 8; i++) {  // newest 8 only; the ring holds NUM_DAYS
     const DayBucket &b = counters.days.days[i];
     Serial.printf("  day[%d] %lu in %.3f out %.3f\n", i, (unsigned long)b.date, b.inGal, b.outGal);
   }

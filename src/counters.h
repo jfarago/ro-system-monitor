@@ -4,7 +4,7 @@
 #pragma once
 #include <stdint.h>
 
-constexpr int NUM_DAYS = 8;  // today + 7 previous days
+constexpr int NUM_DAYS = 30;  // today + 29 previous days (the "30 days" period)
 
 // Persisted structs (NVS blobs). Bump the version when a layout changes; a
 // mismatched blob is discarded and defaults are used.
@@ -28,6 +28,15 @@ struct DaysState {  // NVS key "days"
   double pendOut;
 };
 
+// Version-1 layout (8-day ring), kept so stored history survives the upgrade to 30 days.
+constexpr int NUM_DAYS_V1 = 8;
+struct DaysStateV1 {
+  uint16_t version;
+  DayBucket days[NUM_DAYS_V1];
+  double pendIn;
+  double pendOut;
+};
+
 struct FilterGroup {  // NVS keys "pre", "mem"
   uint16_t version;
   uint32_t installDate;  // yyyymmdd; 0 = fill at next time sync
@@ -36,7 +45,7 @@ struct FilterGroup {  // NVS keys "pre", "mem"
 };
 
 constexpr uint16_t COUNT_STATE_VERSION = 1;
-constexpr uint16_t DAYS_STATE_VERSION = 1;
+constexpr uint16_t DAYS_STATE_VERSION = 2;  // v1 had an 8-day ring, see DaysStateV1
 constexpr uint16_t FILTER_GROUP_VERSION = 1;
 
 struct Totals {
@@ -68,6 +77,8 @@ class Counters {
   FilterGroup mem;
 
   Counters() { setDefaults(); }
+  // Load an old 8-day ring into the 30-day ring (older buckets start empty).
+  void migrateDaysV1(const DaysStateV1 &old);
   void setDefaults();
   void defaultCount();
   void defaultDays();
@@ -90,9 +101,11 @@ class Counters {
   // Periods. With today == 0 (clock not valid) "today" is the pending bucket only
   // and "week" is the stored ring plus pending (approximate until sync).
   Totals today(uint32_t today) const;
-  Totals week(uint32_t today) const;
+  Totals week(uint32_t today) const;   // today + previous 6
+  Totals month(uint32_t today) const;  // today + previous 29
   Totals all() const;
 
  private:
+  Totals lastDays(int n, uint32_t today) const;
   uint8_t rollTo(uint32_t today);
 };
