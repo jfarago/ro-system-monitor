@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
+<div id="ptr" class="ptr" aria-hidden="true"><span class="ptr-ico"></span></div>
 <main class="page">
 
   <header class="head">
@@ -50,8 +51,8 @@
     <h2>Water volume</h2>
     <div class="seg-ctl" role="group" aria-label="Time period">
       <button data-period="today" aria-pressed="true">Today</button>
-      <button data-period="week" aria-pressed="false">7 days</button>
-      <button data-period="month" aria-pressed="false">30 days</button>
+      <button data-period="week" aria-pressed="false" aria-label="7 days">7<span class="long"> days</span><span class="short">d</span></button>
+      <button data-period="month" aria-pressed="false" aria-label="30 days">30<span class="long"> days</span><span class="short">d</span></button>
       <button data-period="all" aria-pressed="false">All</button>
     </div>
   </div>

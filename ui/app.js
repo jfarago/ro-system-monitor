@@ -241,6 +241,55 @@ function trapTab(e) {
   else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
 }
 
+// ---- Pull to refresh ----
+// Pulling down from the top of the page re-polls /api/status (no full reload).
+function initPullToRefresh() {
+  const ptr = $('ptr');
+  const ico = ptr.firstElementChild;
+  const THRESHOLD = 70, MAX = 110;
+  let startY = null, dist = 0, busy = false;
+
+  const show = (h, rotate) => {
+    ptr.style.height = h + 'px';
+    ico.style.opacity = String(Math.min(1, h / 40));
+    ico.style.transform = 'rotate(' + rotate + 'deg)';
+  };
+  const reset = () => {
+    ptr.style.transition = 'height 0.2s';
+    ptr.classList.remove('ready', 'busy');
+    show(0, 0);
+    setTimeout(() => { ptr.style.transition = ''; }, 200);
+  };
+
+  window.addEventListener('touchstart', (e) => {
+    startY = !busy && window.scrollY <= 0 && $('overlay').hidden && e.touches.length === 1 ? e.touches[0].clientY : null;
+    dist = 0;
+  }, { passive: true });
+
+  window.addEventListener('touchmove', (e) => {
+    if (startY === null) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy <= 0 || window.scrollY > 0) { dist = 0; show(0, 0); return; }
+    dist = Math.min(MAX, dy * 0.5);
+    ptr.classList.toggle('ready', dist >= THRESHOLD * 0.5 + 8);
+    show(dist, dist * 4);
+  }, { passive: true });
+
+  const end = async () => {
+    if (startY === null) return;
+    startY = null;
+    if (dist < THRESHOLD * 0.5 + 8) { reset(); return; }
+    busy = true;
+    ptr.classList.add('busy');
+    show(48, 0);
+    await Promise.all([poll(), new Promise((r) => setTimeout(r, 500))]);
+    busy = false;
+    reset();
+  };
+  window.addEventListener('touchend', end);
+  window.addEventListener('touchcancel', end);
+}
+
 function init() {
   document.querySelectorAll('[data-period]').forEach((b) => {
     b.addEventListener('click', () => {
@@ -268,6 +317,7 @@ function init() {
   $('overlay').addEventListener('keydown', trapTab);
   $('overlay').addEventListener('mousedown', (e) => { if (e.target === $('overlay')) dlg.close(); });
 
+  initPullToRefresh();
   poll();
   setInterval(poll, POLL_MS);
   setInterval(renderConn, 1000);
