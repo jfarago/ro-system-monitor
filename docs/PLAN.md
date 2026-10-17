@@ -147,7 +147,7 @@ ro-system-monitor/
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/status` | Full dashboard state (below) |
-| POST | `/api/settings` | `{ prefilter:{installDate,ratingGal}, membrane:{installDate,ratingGal} }`; changed date resets that group's used counter |
+| POST | `/api/settings` | `{ prefilter:{installDate,ratingGal,usedGal}, membrane:{installDate,ratingGal,usedGal} }`, all fields optional; changed date resets that group's used counter, then `usedGal` (0..1,000,000) overwrites it (not in the UI; for setup/curl) |
 | POST | `/api/reset-counters` | Zero every water period (Today, 7 days, 30 days, All), set `countingSince = now`; filter counters untouched |
 | GET/POST | `/api/calibration` | `{ kIn, kOut, kTds, waterTempC }`. Not in the UI; for setup/curl |
 | GET | `/` and static | Gzipped UI from LittleFS (`Content-Encoding: gzip`) |
@@ -281,9 +281,9 @@ Notes for Phase 3:
 ### Phase 4: Home Assistant
 > **Model: Sonnet.**
 
-- [ ] MQTT client + discovery configs + availability/LWT
-- [ ] Verify entities appear in HA; add water sensors to Energy dashboard
-- [ ] Build HA dashboard widgets; "replace filter" notification automation
+- [x] MQTT client + discovery configs + availability/LWT (`src/ha_mqtt.cpp`; builds, not yet run against a broker)
+- [ ] Verify entities appear in HA; add water sensors to Energy dashboard (steps in `docs/home-assistant.md`)
+- [ ] Build HA dashboard widgets; "replace filter" notification automation (YAML drafted in `docs/home-assistant.md`, untested)
 
 ### Phase 5: Hardening
 > **Model: Sonnet** for OTA and the watchdog. **Opus** for reboot-loop or recovery debugging.

@@ -27,5 +27,6 @@ Firmware + web dashboard for a 4-stage under-sink RO system on a Seeed XIAO ESP3
 - Do not read `web/vendor/` or `web/support.js` (large, minified; also deny-listed in `.claude/settings.json`). `web/Main.dc.html` is the design reference.
 - Water periods: Today, 7 days, 30 days (ring of `NUM_DAYS` = 30 buckets), All. Changing the `DaysState` layout needs a version bump plus a migration so stored history survives.
 - Web handlers run on another task: hold `store::Lock` when touching `store::counters` / `store::cal`.
+- MQTT/HA entities live in the `ENTITIES` table in `src/ha_mqtt.cpp`; the state JSON field names must match the table ids.
 - Never commit `include/secrets.h`.
 - Phase 1 is blocked until the flow sensor signal voltage is measured (PLAN §2.1).

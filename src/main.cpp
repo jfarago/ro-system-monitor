@@ -7,6 +7,7 @@
 //   k in|out <pulses/gal>      set a flow K-factor (saved)
 //   t <ppm>                    calibrate kTDS against a handheld pen reading (saved)
 //   filter pre|mem <yyyy-mm-dd> [ratingGal]   set install date / rating (changed date resets used)
+//   used pre|mem <gal>         overwrite a filter's used gallons (one-off correction)
 //   reset                      zero water counters (Today, 7 days, All); filters untouched
 //   inject <inGal> <outGal>    TEST: add volume as if measured
 //   save | reboot | wipe yes   force NVS save / restart / erase all stored data
@@ -15,6 +16,7 @@
 #include "config.h"
 #include "counters.h"
 #include "flow.h"
+#include "ha_mqtt.h"
 #include "net.h"
 #include "store.h"
 #include "tds.h"
@@ -124,6 +126,22 @@ static void handleCommand(String line) {
     store::markDirty(counters.setFilter(isPre ? FilterId::Prefilter : FilterId::Membrane, d, rating));
     store::requestSave();
     Serial.println("# filter updated");
+  } else if (line.startsWith("used ")) {
+    char which[8];
+    float gal;
+    bool isPre = false, isMem = false;
+    bool ok = sscanf(line.c_str() + 5, "%7s %f", which, &gal) == 2 && gal >= 0;
+    if (ok) {
+      isPre = !strcmp(which, "pre");
+      isMem = !strcmp(which, "mem");
+    }
+    if (!ok || (!isPre && !isMem)) {
+      Serial.println("# usage: used pre|mem <gal>");
+      return;
+    }
+    store::markDirty(counters.setUsed(isPre ? FilterId::Prefilter : FilterId::Membrane, gal));
+    store::requestSave();
+    Serial.printf("# %s used = %.1f gal\n", isPre ? "prefilter" : "membrane", gal);
   } else if (line == "reset") {
     store::markDirty(counters.resetCounters(today));
     store::requestSave();
@@ -147,7 +165,7 @@ static void handleCommand(String line) {
     Serial.println("# NVS wiped, defaults loaded");
   } else {
     Serial.println("# commands: s | r | g | k in|out <ppg> | t <ppm> | filter pre|mem <date> [gal] | "
-                   "reset | inject <in> <out> | save | reboot | wipe yes");
+                   "used pre|mem <gal> | reset | inject <in> <out> | save | reboot | wipe yes");
   }
 }
 
@@ -192,6 +210,7 @@ void setup() {
   flow::begin();
   net::begin();
   web::begin();
+  ha::begin();
   printStatus();
 }
 
@@ -199,6 +218,7 @@ void loop() {
   uint32_t now = millis();
   tds::update(now);
   net::loop(now);
+  ha::loop(now);
   pollSerial();
 
   if (now - lastFlowMs >= FLOW_SAMPLE_MS) {

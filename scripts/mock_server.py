@@ -65,6 +65,8 @@ class H(BaseHTTPRequestHandler):
                     cur["installDate"], cur["usedGal"] = new["installDate"], 0
                 if new.get("ratingGal"):
                     cur["ratingGal"] = new["ratingGal"]
+                if new.get("usedGal") is not None:
+                    cur["usedGal"] = new["usedGal"]
         else:
             return self._json(404, {"error": "not found"})
         self._json(200, {"ok": True})

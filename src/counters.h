@@ -98,6 +98,9 @@ class Counters {
   // installDate must be a valid date (check with isValidDate). ratingGal <= 0 keeps the current rating.
   uint8_t setFilter(FilterId id, uint32_t installDate, float ratingGal);
 
+  // Overwrite a group's used gallons (e.g. to account for water before the monitor was installed).
+  uint8_t setUsed(FilterId id, double usedGal);
+
   // Periods. With today == 0 (clock not valid) "today" is the pending bucket only
   // and "week" is the stored ring plus pending (approximate until sync).
   Totals today(uint32_t today) const;

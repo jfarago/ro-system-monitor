@@ -181,12 +181,24 @@ static void test_install_date_rule() {
   TEST_ASSERT_EQUAL_DOUBLE(10.0, c.mem.usedGal);
 }
 
+static void test_set_used() {
+  c.tick(20261017);
+  c.addFlow(10.0, 3.0, 20261017);
+  TEST_ASSERT_EQUAL_UINT8(DIRTY_MEM, c.setUsed(FilterId::Membrane, 1248));
+  TEST_ASSERT_EQUAL_DOUBLE(1248, c.mem.usedGal);
+  TEST_ASSERT_EQUAL_DOUBLE(10.0, c.pre.usedGal);
+  TEST_ASSERT_EQUAL_UINT8(0, c.setUsed(FilterId::Membrane, 1248));  // unchanged
+  TEST_ASSERT_EQUAL_UINT8(0, c.setUsed(FilterId::Membrane, -1));    // rejected
+  TEST_ASSERT_EQUAL_DOUBLE(1248, c.mem.usedGal);
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_dates);
   RUN_TEST(test_first_sync_dates_ring_and_fills_since);
   RUN_TEST(test_waste_is_in_minus_out_clamped);
   RUN_TEST(test_filters_count_total);
+  RUN_TEST(test_set_used);
   RUN_TEST(test_midnight_rollover);
   RUN_TEST(test_gap_fills_zero_days);
   RUN_TEST(test_week_excludes_eighth_day);

@@ -140,11 +140,17 @@ static bool applyFilter(JsonVariantConst v, FilterId id, uint8_t &dirty, const c
     rating = v["ratingGal"] | 0.0f;
     if (!(rating >= 1 && rating <= 100000)) { err = "ratingGal must be 1..100000"; return false; }
   }
+  double used = -1;
+  if (!v["usedGal"].isNull()) {
+    used = v["usedGal"] | -1.0;
+    if (!(used >= 0 && used <= 1000000)) { err = "usedGal must be 0..1000000"; return false; }
+  }
   if (date) dirty |= c.setFilter(id, date, rating);
   else if (rating > 0 && rating != g.ratingGal) {  // rating only (also works before the first sync)
     g.ratingGal = rating;
     dirty |= bit;
   }
+  if (used >= 0) dirty |= c.setUsed(id, used);  // after the date, so date + usedGal sets the new value
   return true;
 }
 

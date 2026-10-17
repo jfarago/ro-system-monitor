@@ -44,4 +44,8 @@ constexpr int TDS_SAMPLES = 30;
 constexpr uint32_t TDS_SMOOTH_TICK_MS = 1000;  // the median feeds the moving average this often
 constexpr float TDS_SMOOTH_ALPHA = 0.1f;       // ~10 s time constant; lower = smoother, slower to react
 constexpr uint32_t SAVE_INTERVAL_MS = 60000;   // max time unsaved changes are held in RAM
-constexpr uint32_t MQTT_PUBLISH_MS = 30000;
+constexpr uint32_t MQTT_PUBLISH_MS = 30000;    // periodic state publish
+constexpr uint32_t MQTT_MIN_GAP_MS = 2000;     // min spacing for change-triggered publishes
+constexpr uint32_t MQTT_RETRY_MIN_MS = 5000;   // broker reconnect backoff 5 s, 10 s, ... capped at 60 s
+constexpr uint32_t MQTT_RETRY_MAX_MS = 60000;
+constexpr uint16_t MQTT_BUFFER_BYTES = 1536;   // largest payload: the state JSON

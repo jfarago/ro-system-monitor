@@ -161,6 +161,13 @@ uint8_t Counters::setFilter(FilterId id, uint32_t installDate, float ratingGal) 
   return dirty;
 }
 
+uint8_t Counters::setUsed(FilterId id, double usedGal) {
+  FilterGroup &g = id == FilterId::Prefilter ? pre : mem;
+  if (usedGal < 0 || usedGal == g.usedGal) return 0;
+  g.usedGal = usedGal;
+  return id == FilterId::Prefilter ? DIRTY_PRE : DIRTY_MEM;
+}
+
 Totals Counters::today(uint32_t today) const {
   if (today == 0) return {days.pendOut, clampWaste(days.pendIn, days.pendOut)};
   const DayBucket &b = days.days[0];
