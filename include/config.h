@@ -8,7 +8,7 @@ constexpr int PIN_FLOW_OUT = 4;  // water OUT (clean RO)
 
 // Flow calibration: F(Hz) = 38 * Q(L/min) -> 2280 pulses/L
 constexpr float K_FLOW_IN_PER_GAL = 8631.0f;
-constexpr float K_FLOW_OUT_PER_GAL = 8631.0f;
+constexpr float K_FLOW_OUT_PER_GAL = 8389.0f;  // measured over a 1 gal fill
 constexpr uint32_t FLOW_DEBOUNCE_US = 2000;
 
 // TDS

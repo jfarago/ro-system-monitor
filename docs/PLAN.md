@@ -246,10 +246,10 @@ Entities (`homeassistant/<component>/ro_monitor/<object>/config`):
 ### Phase 1: Sensor bring-up (serial output only)
 > **Model: Sonnet.** Switch to Opus if readings act strangely and need deeper debugging.
 
-- [ ] Verify the flow signal voltage (§2.1) and add dividers if needed
-- [ ] Flow ISRs; print pulses and gallons for IN and OUT; sanity-check by filling a known 1-gal container from the faucet
-- [ ] TDS sampling and conversion; compare against a handheld TDS pen and set `kTDS`
-- [ ] Confirm GPIO2 boots and flashes with the sensor attached
+- [x] Verify the flow signal voltage (§2.1) and add dividers if needed
+- [x] Flow ISRs; print pulses and gallons for IN and OUT; sanity-check by filling a known 1-gal container from the faucet (OUT measured 8389 pulses/gal; IN left at 8631, check in Phase 5)
+- [x] TDS sampling and conversion; compare against a handheld TDS pen and set `kTDS` (matches pen, kTDS = 1.0)
+- [x] Confirm GPIO2 boots and flashes with the sensor attached
 
 ### Phase 2: Core logic
 > **Model: Opus.** Counter, rollover, persistence and pre-sync edge cases are easy to get subtly wrong.
