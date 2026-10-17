@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./web/vendor/**)",
+      "Read(./web/support.js)",
+      "Read(./.pio/**)"
+    ]
+  }
+}
