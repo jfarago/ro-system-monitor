@@ -9,8 +9,8 @@ Status: Phase 0 (project scaffold). See [docs/PLAN.md](docs/PLAN.md) for the roa
 | Part | Wire | XIAO ESP32-C3 |
 |---|---|---|
 | Flow sensor IN | red / black / yellow | 5 V / GND / GPIO2 (D0) |
-| Flow sensor OUT | red / black / yellow | 5 V / GND / GPIO3 (D1) |
-| TDS module | VCC / GND / signal | 3V3 / GND / GPIO4 (D2) |
+| TDS module | VCC / GND / signal | 3V3 / GND / GPIO3 (D1) |
+| Flow sensor OUT | red / black / yellow | 5 V / GND / GPIO4 (D2) |
 
 The flow sensors may output 5 V pulses, which the ESP32-C3 cannot tolerate. Measure the signal wire first and add a divider if needed (see [docs/hardware.md](docs/hardware.md)).
 

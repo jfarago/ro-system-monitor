@@ -3,8 +3,8 @@
 
 // Pins (XIAO ESP32-C3: GPIO2 = D0, GPIO3 = D1, GPIO4 = D2)
 constexpr int PIN_FLOW_IN = 2;   // water IN (total feed); strapping pin, must be high at boot
-constexpr int PIN_FLOW_OUT = 3;  // water OUT (clean RO)
-constexpr int PIN_TDS = 4;       // product TDS probe, ADC1_CH4
+constexpr int PIN_TDS = 3;       // product TDS probe, ADC1_CH3
+constexpr int PIN_FLOW_OUT = 4;  // water OUT (clean RO)
 
 // Flow calibration: F(Hz) = 38 * Q(L/min) -> 2280 pulses/L
 constexpr float K_FLOW_IN_PER_GAL = 8631.0f;

@@ -6,8 +6,8 @@ Firmware + web dashboard for a 4-stage under-sink RO system on a Seeed XIAO ESP3
 | Pin | Function |
 |---|---|
 | GPIO2 | Flow sensor, water IN (total feed). Strapping pin: must be high at boot |
-| GPIO3 | Flow sensor, water OUT (clean RO) |
-| GPIO4 | TDS probe (product water), ADC1_CH4. Feed TDS is hardcoded (`FEED_TDS_PPM`, 180) |
+| GPIO3 | TDS probe (product water), ADC1_CH3. Feed TDS is hardcoded (`FEED_TDS_PPM`, 180) |
+| GPIO4 | Flow sensor, water OUT (clean RO) |
 
 ## Commands
 - Build: `pio run 2>&1 | tail -20`
@@ -20,7 +20,7 @@ Firmware + web dashboard for a 4-stage under-sink RO system on a Seeed XIAO ESP3
 `src/` firmware, `include/config.h` pins/defaults, `include/secrets.h` (gitignored, copy from `secrets.example.h`), `ui/` production dashboard (Phase 3), `data/` generated gzipped UI (gitignored), `web/` design mockup (reference only), `docs/`.
 
 ## Rules
-- **Waste = in − out** (GPIO2 minus GPIO3), clamped at >= 0. Total = in, clean = out.
+- **Waste = in − out** (GPIO2 minus GPIO4), clamped at >= 0. Total = in, clean = out.
 - **Membrane counter counts total water** (same as prefilters). Switch: `MEMBRANE_COUNTS_TOTAL` in `config.h`.
 - Do not read `web/vendor/` or `web/support.js` (large, minified; also deny-listed in `.claude/settings.json`). `web/Main.dc.html` is the design reference.
 - Never commit `include/secrets.h`.

@@ -29,8 +29,8 @@
 | Signal | Sensor wire | ESP32-C3 pin |
 |---|---|---|
 | Flow IN (total feed) | yellow | GPIO2 (D0) |
-| Flow OUT (clean RO) | yellow | GPIO3 (D1) |
-| TDS (product water) | signal | GPIO4 (D2) |
+| TDS (product water) | signal | GPIO3 (D1) |
+| Flow OUT (clean RO) | yellow | GPIO4 (D2) |
 
 ## Power
 
@@ -47,5 +47,5 @@ F = 38 × Q, with Q in L/min, so pulses per litre = 38 × 60 = **2,280**. At 3.7
 2. **GPIO2 is a strapping pin** and must be high at boot. If the board fails to boot or flash with the sensor attached, add an external pull-up or move the sensor to D6/D7 (avoid GPIO8 and GPIO9).
 3. **Flow range.** The OUT sensor is after the storage tank and sees faucet flow (~1–2 L/min), within its range.
 4. **Tank timing.** Water goes IN while the tank fills and OUT when the faucet runs, so waste (in − out) is only accurate over longer windows.
-5. **TDS ADC.** Use `analogReadMilliVolts()` at 11 dB attenuation. GPIO4 (ADC1) works with Wi-Fi on.
+5. **TDS ADC.** Use `analogReadMilliVolts()` at 11 dB attenuation. GPIO3 (ADC1) works with Wi-Fi on.
 6. **No temperature sensor.** TDS assumes 25 °C unless a fixed temperature is configured.

@@ -2,18 +2,18 @@
 
 Firmware and web dashboard for a 4-stage under-sink RO system, running on a Seeed XIAO ESP32-C3. The device joins home Wi-Fi, serves the mobile dashboard from flash, keeps the time with NTP, and publishes its readings to Home Assistant.
 
-Source material: `docs/project-overview.md`, `docs/hardware.md`, and the design mockup in `web/`.
+Source material: the original firmware brief (removed from the tree, see `git show b56b95b:docs/project-overview.md`), `docs/hardware.md`, and the design mockup in `web/`.
 
 ---
 
 ## 1. Decisions that override the original firmware brief
 
-The firmware brief in `project-overview.md` was written before the hardware was finalized. Where it disagrees with the real build, the build wins:
+The original firmware brief (`project-overview.md`, in git history) was written before the hardware was finalized. Where it disagrees with the real build, the build wins:
 
 | Topic | Brief said | Actual build / decision |
 |---|---|---|
-| Flow sensors | One on the product line, one on the drain line; total = clean + waste | **GPIO2 = water IN (total feed)**, **GPIO3 = water OUT (clean RO)**. **Waste = in − out**, clamped at ≥ 0 |
-| TDS probes | Two probes (feed + product) | **One probe on GPIO4** (product/clean water). **Feed TDS is hardcoded at 180 ppm** (configurable constant) |
+| Flow sensors | One on the product line, one on the drain line; total = clean + waste | **GPIO2 = water IN (total feed)**, **GPIO4 = water OUT (clean RO)**. **Waste = in − out**, clamped at ≥ 0 |
+| TDS probes | Two probes (feed + product) | **One probe on GPIO3** (product/clean water). **Feed TDS is hardcoded at 180 ppm** (configurable constant) |
 | Membrane counter | Counts clean water only | **Counts total water**, the same as the prefilters. Keep a compile-time/config switch so it can be flipped back to clean-only |
 | Network mode | AP or STA, undecided | **STA: joins "Hots for Tots"**. AP mode is only a fallback for recovery when Wi-Fi fails |
 | Time source | NTP, RTC, or phone time | **NTP over Wi-Fi**, in US Eastern time (`EST5EDT,M3.2.0,M11.1.0`, North Carolina) for local midnight and DST |
@@ -35,7 +35,7 @@ These come from the parts in `hardware.md` and could change the wiring:
 2. **GPIO2 is a strapping pin on the ESP32-C3.** It has to be high at boot, which works with a pulled-up, idle-high flow signal. If the board ever fails to boot or flash with the sensor attached, this pin is the cause. Fixes are an external pull-up, or moving the sensor to a free GPIO such as D6/D7 (avoid GPIO8 and GPIO9, which are also strapping pins).
 3. **Flow sensor minimum flow.** The sensors are rated for **0.3–6 L/min**. RO membrane production (~0.1–0.3 L/min) would sit at or below that floor, but **the OUT sensor is after the storage tank**, so it sees faucet flow (~1–2 L/min), which is well within range. ✅ Resolved.
 4. **Storage tank timing effect.** Water goes IN while the tank fills, and comes OUT when the faucet runs, often hours apart. Because waste = in − out, **waste is only accurate over longer windows**. For example, "Today" right after a tank refill will show high waste. This is expected behavior. The UI and HA show what is measured, and the plan documents the caveat rather than trying to correct for it.
-5. **TDS module output (0–2.3 V)** fits the ESP32-C3 ADC at 11 dB attenuation (~0–2.5 V). Use `analogReadMilliVolts()`, which applies the factory calibration. GPIO4 is ADC1_CH4, which works while Wi-Fi is on. Power the module from **3.3 V**.
+5. **TDS module output (0–2.3 V)** fits the ESP32-C3 ADC at 11 dB attenuation (~0–2.5 V). Use `analogReadMilliVolts()`, which applies the factory calibration. GPIO3 is ADC1_CH3, which works while Wi-Fi is on. Power the module from **3.3 V**.
 6. **No temperature sensor.** TDS compensation assumes 25 °C, with a configurable fixed water temperature. A DS18B20 can be added later on a spare pin.
 
 **K-factor from the spec:** F (Hz) = 38 × Q (L/min), so 38 × 60 = **2,280 pulses/L**, or **≈ 8,631 pulses/gal**. This is the default for both sensors. It is stored per sensor in NVS so each one can be calibrated separately (±3% spec plus install effects).
@@ -47,8 +47,8 @@ These come from the parts in `hardware.md` and could change the wiring:
 ```
                  ┌──────────────── XIAO ESP32-C3 ────────────────┐
  Flow IN  (GPIO2)┤ ISR pulse counter ┐                            │
- Flow OUT (GPIO3)┤ ISR pulse counter ┼─► Accumulator (gal) ─► Store (NVS)
- TDS      (GPIO4)┤ ADC sampler ──────┘     │  daily buckets        │
+ Flow OUT (GPIO4)┤ ISR pulse counter ┼─► Accumulator (gal) ─► Store (NVS)
+ TDS      (GPIO3)┤ ADC sampler ──────┘     │  daily buckets        │
                  │                         ▼                       │
                  │  NTP clock ──►   State model  ──► REST API ─────┼─► Phone browser
                  │                         │       (LittleFS UI)   │   (ro-monitor.local)
@@ -237,7 +237,7 @@ Entities (`homeassistant/<component>/ro_monitor/<object>/config`):
   ```
 - [x] `.gitignore`: `.pio/`, `.vscode/` (except recommended extensions), `include/secrets.h`, `data/`, `.DS_Store`
 - [x] Initialize PlatformIO project (`pio project init --board seeed_xiao_esp32c3`), `platformio.ini` with libraries, `monitor_speed = 115200`, USB CDC on boot flags, LittleFS, custom partitions
-- [x] `include/config.h` (pins GPIO2/3/4, feed 180 ppm, defaults, TZ `EST5EDT,M3.2.0,M11.1.0`) and `include/secrets.example.h`
+- [x] `include/config.h` (pins GPIO2/3/4 (IN/TDS/OUT), feed 180 ppm, defaults, TZ `EST5EDT,M3.2.0,M11.1.0`) and `include/secrets.example.h`
 - [ ] Blink/serial "hello" build flashes to the XIAO (builds OK; flash not yet tested, no board connected)
 - [x] `README.md` (overview, wiring, build/flash steps)
 - [x] Clean up `docs/hardware.md`: parts table, specs, pinout/wiring table, power notes, K-factor derivation, the §2 cautions
