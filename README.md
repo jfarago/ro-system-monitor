@@ -2,6 +2,8 @@
 
 Monitors a 4-stage under-sink reverse osmosis system with a Seeed XIAO ESP32-C3. It counts water in and out with two flow sensors (Today, 7 days, 30 days and all-time totals), reads product TDS, tracks filter life, and serves a mobile dashboard from flash at `ro-monitor.local`. Publishes to Home Assistant over MQTT discovery ([docs/home-assistant.md](docs/home-assistant.md)).
 
+<img src="docs/app-screenshot.png" alt="RO Monitor dashboard" width="320">
+
 Status: Phase 4 (Home Assistant MQTT; firmware done, HA-side verification pending). UI dev without hardware: `python3 scripts/mock_server.py` (http://localhost:8080). See [docs/PLAN.md](docs/PLAN.md) for the roadmap.
 
 ## Wiring
@@ -27,7 +29,20 @@ pio device monitor       # serial at 115200
 pio test -e native       # host unit tests for the counter logic
 ```
 
-Serial console commands (one per line): `s` status, `r`/`g` 1-gal calibration fill, `k in|out <pulses/gal>`, `t <ppm>` TDS calibration, `filter pre|mem <yyyy-mm-dd> [ratingGal]`, `used pre|mem <gal>` (overwrite used gallons), `reset` water counters, `inject <inGal> <outGal>` (test), `save`, `reboot`, `wipe yes`. See the header of `src/main.cpp`.
+### Wireless updates (OTA)
+
+After the OTA firmware is on the board (first flash is over USB), update it over Wi-Fi. The upload password is `OTA_PASSWORD` from `include/secrets.h`. PlatformIO doesn't read that file, so export the same value in your shell, e.g. in `~/.zshrc`:
+
+```sh
+export OTA_PASSWORD='your-password'
+pio run -e ota -t upload     # builds and uploads to ro-monitor.local
+```
+
+You can also upload a firmware or filesystem `.bin` from a browser at `http://ro-monitor.local/update` (user `admin`, same password).
+
+The watchdog reboots the board if `loop()` hangs for 15 s. Long Wi-Fi outages restart the radio rather than the board.
+
+Serial console commands (one per line): `s` status, `r`/`g` 1-gal calibration fill, `k in|out <pulses/gal>`, `t <ppm>` TDS calibration, `filter pre|mem <yyyy-mm-dd> [ratingGal]`, `used pre|mem <gal>` (overwrite used gallons), `reset` water counters, `inject <inGal> <outGal>` (test), `save`, `reboot`, `hang` (test the watchdog), `wipe yes`. See the header of `src/main.cpp`.
 
 ## Web UI and API
 
