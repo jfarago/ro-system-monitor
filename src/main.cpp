@@ -1,98 +1,177 @@
-// Phase 1: sensor bring-up. Serial output only.
+// RO system monitor firmware.
 //
 // Serial commands (send a line, 115200 baud):
-//   r        zero the pulse/gallon counters (start of a calibration fill)
-//   g        print measured pulses/gal for each sensor since the last 'r'
-//            (use after filling exactly 1 gal)
-//   t <ppm>  enter the reading from a handheld TDS pen; prints the kTDS to use
+//   s                          status
+//   r                          zero the calibration pulse counters (start of a 1 gal fill)
+//   g                          measured pulses/gal per sensor since 'r'
+//   k in|out <pulses/gal>      set a flow K-factor (saved)
+//   t <ppm>                    calibrate kTDS against a handheld pen reading (saved)
+//   filter pre|mem <yyyy-mm-dd> [ratingGal]   set install date / rating (changed date resets used)
+//   reset                      zero water counters (Today, 7 days, All); filters untouched
+//   inject <inGal> <outGal>    TEST: add volume as if measured
+//   save | reboot | wipe yes   force NVS save / restart / erase all stored data
 #include <Arduino.h>
+#include "clock.h"
 #include "config.h"
+#include "counters.h"
+#include "flow.h"
+#include "net.h"
+#include "store.h"
+#include "tds.h"
 
-constexpr uint32_t TDS_SAMPLE_MS = 40;
-constexpr int TDS_SAMPLES = 30;
+static Counters &counters = store::counters;
+static Calibration &cal = store::cal;
 
-struct FlowCounter {
-  volatile uint32_t pulses = 0;
-  volatile uint32_t lastEdgeUs = 0;
-  uint32_t lastSnapshot = 0;
-};
+static uint32_t lastFlowMs = 0;
+static uint32_t lastPulseMs = 0;
+static bool anyPulse = false;
+static bool inFlowEvent = false;
+static bool timeWasValid = false;
+static uint32_t calPulsesIn = 0, calPulsesOut = 0;
 
-static FlowCounter flowIn, flowOut;
-static portMUX_TYPE flowMux = portMUX_INITIALIZER_UNLOCKED;
+static bool flowing(uint32_t now) { return anyPulse && now - lastPulseMs < FLOW_ACTIVE_MS; }
 
-static void IRAM_ATTR onEdge(FlowCounter &f) {
-  uint32_t now = micros();
-  if (now - f.lastEdgeUs < FLOW_DEBOUNCE_US) return;
-  f.lastEdgeUs = now;
-  f.pulses++;
-}
-static void IRAM_ATTR isrIn() { onEdge(flowIn); }
-static void IRAM_ATTR isrOut() { onEdge(flowOut); }
+static void printStatus() {
+  uint32_t now = millis();
+  uint32_t today = clk::today();
+  char iso[32], since[12], preD[12], memD[12];
+  clk::isoTime(iso, sizeof iso);
+  clk::formatDate(counters.cnt.since, since, sizeof since);
+  clk::formatDate(counters.pre.installDate, preD, sizeof preD);
+  clk::formatDate(counters.mem.installDate, memD, sizeof memD);
+  Totals t = counters.today(today), w = counters.week(today), a = counters.all();
+  float ppm = tds::ppm(cal.kTds, cal.waterTempC);
 
-static uint32_t readPulses(const FlowCounter &f) {
-  portENTER_CRITICAL(&flowMux);
-  uint32_t p = f.pulses;
-  portEXIT_CRITICAL(&flowMux);
-  return p;
-}
-
-static uint32_t tdsBuf[TDS_SAMPLES];
-static int tdsIdx = 0;
-static bool tdsFull = false;
-static float kTds = K_TDS;
-static uint32_t lastTdsSampleMs = 0;
-static uint32_t lastReportMs = 0;
-
-static uint32_t median(uint32_t *src, int n) {
-  uint32_t tmp[TDS_SAMPLES];
-  memcpy(tmp, src, n * sizeof(uint32_t));
-  for (int i = 1; i < n; i++) {
-    uint32_t v = tmp[i];
-    int j = i - 1;
-    while (j >= 0 && tmp[j] > v) { tmp[j + 1] = tmp[j]; j--; }
-    tmp[j + 1] = v;
+  Serial.printf("time %s (%s) | uptime %lu s | wifi %s%s rssi %d | flowing %d\n",
+                iso[0] ? iso : "-", today ? "valid" : "NOT SYNCED", (unsigned long)(now / 1000),
+                net::connected() ? "up" : "down", net::apActive() ? " +AP" : "", net::rssi(),
+                flowing(now));
+  Serial.printf("tds %.1f ppm (%lu mV) rejection %.1f%% | K in %.0f out %.0f kTds %.3f T %.1fC\n", ppm,
+                (unsigned long)tds::medianMv(), tds::rejectionPct(ppm), cal.kIn, cal.kOut, cal.kTds,
+                cal.waterTempC);
+  Serial.printf("today clean %.3f waste %.3f | week clean %.3f waste %.3f | all clean %.3f waste %.3f | since %s\n",
+                t.clean, t.waste, w.clean, w.waste, a.clean, a.waste, since[0] ? since : "(at sync)");
+  Serial.printf("pending in %.3f out %.3f | allIn %.3f allOut %.3f\n", counters.days.pendIn,
+                counters.days.pendOut, counters.cnt.allIn, counters.cnt.allOut);
+  for (int i = 0; i < NUM_DAYS; i++) {
+    const DayBucket &b = counters.days.days[i];
+    Serial.printf("  day[%d] %lu in %.3f out %.3f\n", i, (unsigned long)b.date, b.inGal, b.outGal);
   }
-  return tmp[n / 2];
+  Serial.printf("prefilter %s %.0f gal used %.3f | membrane %s %.0f gal used %.3f (counts %s)\n",
+                preD, counters.pre.ratingGal, counters.pre.usedGal, memD, counters.mem.ratingGal,
+                counters.mem.usedGal, MEMBRANE_COUNTS_TOTAL ? "total" : "clean");
+  Serial.printf("nvs saves since boot %lu\n", (unsigned long)store::saveCount());
 }
 
-// DFRobot-style TDS curve, mV in, ppm out (before kTDS).
-static float mvToPpm(float mv) {
-  float v = mv / 1000.0f;
-  float c = v / (1.0f + 0.02f * (WATER_TEMP_C - 25.0f));
-  return (133.42f * c * c * c - 255.86f * c * c + 857.39f * c) * 0.5f;
+static uint32_t parseDate(const char *s) {
+  unsigned y, m, d;
+  if (sscanf(s, "%u-%u-%u", &y, &m, &d) != 3) return 0;
+  uint32_t v = y * 10000 + m * 100 + d;
+  return isValidDate(v) ? v : 0;
 }
 
-static void handleSerial() {
-  if (!Serial.available()) return;
-  String line = Serial.readStringUntil('\n');
+static void handleCommand(String line) {
   line.trim();
   if (line.length() == 0) return;
+  uint32_t today = clk::today();
 
-  if (line == "r") {
-    portENTER_CRITICAL(&flowMux);
-    flowIn.pulses = 0;
-    flowOut.pulses = 0;
-    portEXIT_CRITICAL(&flowMux);
-    flowIn.lastSnapshot = flowOut.lastSnapshot = 0;
-    Serial.println("# counters zeroed");
+  if (line == "s") {
+    printStatus();
+  } else if (line == "r") {
+    calPulsesIn = calPulsesOut = 0;
+    Serial.println("# calibration counters zeroed");
   } else if (line == "g") {
-    Serial.printf("# measured since 'r' (for exactly 1 gal): IN %lu pulses/gal, OUT %lu pulses/gal "
-                  "(config: %.0f / %.0f)\n",
-                  (unsigned long)readPulses(flowIn), (unsigned long)readPulses(flowOut),
-                  K_FLOW_IN_PER_GAL, K_FLOW_OUT_PER_GAL);
+    Serial.printf("# since 'r' (for exactly 1 gal): IN %lu pulses/gal, OUT %lu pulses/gal (K: %.0f / %.0f)\n",
+                  (unsigned long)calPulsesIn, (unsigned long)calPulsesOut, cal.kIn, cal.kOut);
+  } else if (line.startsWith("k ")) {
+    char which[8];
+    float k;
+    if (sscanf(line.c_str() + 2, "%7s %f", which, &k) == 2 && k > 100) {
+      if (!strcmp(which, "in")) cal.kIn = k;
+      else if (!strcmp(which, "out")) cal.kOut = k;
+      else { Serial.println("# usage: k in|out <pulses/gal>"); return; }
+      store::markDirty(DIRTY_CAL);
+      store::requestSave();
+      Serial.printf("# K %s = %.0f\n", which, k);
+    } else {
+      Serial.println("# usage: k in|out <pulses/gal>");
+    }
   } else if (line.startsWith("t ")) {
     float ref = line.substring(2).toFloat();
-    uint32_t mv = median(tdsBuf, tdsFull ? TDS_SAMPLES : max(tdsIdx, 1));
-    float raw = mvToPpm(mv);
+    float raw = tds::rawPpm(cal.waterTempC);
     if (ref > 0 && raw > 0) {
-      kTds = ref / raw;
-      Serial.printf("# pen=%.0f ppm, raw=%.1f ppm at %lu mV -> set K_TDS = %.3f in config.h "
-                    "(applied for this session)\n", ref, raw, (unsigned long)mv, kTds);
+      cal.kTds = ref / raw;
+      store::markDirty(DIRTY_CAL);
+      store::requestSave();
+      Serial.printf("# pen=%.0f ppm, raw=%.1f ppm -> kTDS = %.3f (saved)\n", ref, raw, cal.kTds);
     } else {
       Serial.println("# need a positive pen reading and nonzero probe signal");
     }
+  } else if (line.startsWith("filter ")) {
+    char which[8], date[16];
+    float rating = 0;
+    int n = sscanf(line.c_str() + 7, "%7s %15s %f", which, date, &rating);
+    uint32_t d = n >= 2 ? parseDate(date) : 0;
+    bool isPre = !strcmp(which, "pre"), isMem = !strcmp(which, "mem");
+    if (n < 2 || !d || (!isPre && !isMem)) {
+      Serial.println("# usage: filter pre|mem <yyyy-mm-dd> [ratingGal]");
+      return;
+    }
+    store::markDirty(counters.setFilter(isPre ? FilterId::Prefilter : FilterId::Membrane, d, rating));
+    store::requestSave();
+    Serial.println("# filter updated");
+  } else if (line == "reset") {
+    store::markDirty(counters.resetCounters(today));
+    store::requestSave();
+    Serial.println("# water counters reset");
+  } else if (line.startsWith("inject ")) {
+    double in = 0, out = 0;
+    if (sscanf(line.c_str() + 7, "%lf %lf", &in, &out) == 2 && in >= 0 && out >= 0) {
+      store::markDirty(counters.addFlow(in, out, today));
+      Serial.printf("# injected in %.3f out %.3f gal (%s)\n", in, out, today ? "today" : "pending");
+    } else {
+      Serial.println("# usage: inject <inGal> <outGal>");
+    }
+  } else if (line == "save") {
+    store::saveNow();
+  } else if (line == "reboot") {
+    store::saveNow();
+    Serial.flush();
+    ESP.restart();
+  } else if (line == "wipe yes") {
+    store::wipe();
+    Serial.println("# NVS wiped, defaults loaded");
   } else {
-    Serial.println("# commands: r | g | t <ppm>");
+    Serial.println("# commands: s | r | g | k in|out <ppg> | t <ppm> | filter pre|mem <date> [gal] | "
+                   "reset | inject <in> <out> | save | reboot | wipe yes");
+  }
+}
+
+static void pollSerial() {
+  static String line;
+  while (Serial.available()) {
+    char ch = (char)Serial.read();
+    if (ch == '\n' || ch == '\r') {
+      if (line.length()) handleCommand(line);
+      line = "";
+    } else if (line.length() < 80) {
+      line += ch;
+    }
+  }
+}
+
+static void updateFlow(uint32_t now, uint32_t today) {
+  flow::Pulses d = flow::takeDelta();
+  calPulsesIn += d.in;
+  calPulsesOut += d.out;
+  if (d.in || d.out) {
+    lastPulseMs = now;
+    anyPulse = true;
+    inFlowEvent = true;
+    store::markDirty(counters.addFlow(d.in / cal.kIn, d.out / cal.kOut, today));
+  } else if (inFlowEvent && now - lastPulseMs >= FLOW_EVENT_END_MS) {
+    inFlowEvent = false;
+    store::requestSave();
   }
 }
 
@@ -100,60 +179,36 @@ void setup() {
   Serial.begin(115200);
   uint32_t t0 = millis();
   while (!Serial && millis() - t0 < 3000) delay(10);
-
-  // Flow sensors: internal pull-ups are harmless with a divider and needed if open-collector.
-  pinMode(PIN_FLOW_IN, INPUT_PULLUP);
-  pinMode(PIN_FLOW_OUT, INPUT_PULLUP);
-  analogSetPinAttenuation(PIN_TDS, ADC_11db);
-
-  Serial.println("\n=== RO monitor: Phase 1 sensor bring-up ===");
+  Serial.println("\n=== RO monitor ===");
   Serial.printf("reset reason: %d (1=power-on, 3=sw, 4=panic, 7/8=wdt)\n", (int)esp_reset_reason());
-  Serial.printf("idle level at boot: FLOW_IN(GPIO%d)=%d  FLOW_OUT(GPIO%d)=%d  (expect 1 with no flow if signal idles high)\n",
-                PIN_FLOW_IN, digitalRead(PIN_FLOW_IN), PIN_FLOW_OUT, digitalRead(PIN_FLOW_OUT));
-  Serial.printf("K: IN=%.0f OUT=%.0f pulses/gal, kTDS=%.3f, feed=%.0f ppm\n",
-                K_FLOW_IN_PER_GAL, K_FLOW_OUT_PER_GAL, kTds, FEED_TDS_PPM);
-  Serial.println("commands: r (zero counters) | g (pulses/gal for a 1 gal fill) | t <ppm> (calibrate TDS)");
 
-  attachInterrupt(digitalPinToInterrupt(PIN_FLOW_IN), isrIn, FALLING);
-  attachInterrupt(digitalPinToInterrupt(PIN_FLOW_OUT), isrOut, FALLING);
+  clk::begin();
+  store::begin();
+  tds::begin();
+  flow::begin();
+  net::begin();
+  printStatus();
 }
 
 void loop() {
   uint32_t now = millis();
+  tds::update(now);
+  net::loop(now);
+  pollSerial();
 
-  if (now - lastTdsSampleMs >= TDS_SAMPLE_MS) {
-    lastTdsSampleMs = now;
-    tdsBuf[tdsIdx] = analogReadMilliVolts(PIN_TDS);
-    tdsIdx = (tdsIdx + 1) % TDS_SAMPLES;
-    if (tdsIdx == 0) tdsFull = true;
+  if (now - lastFlowMs >= FLOW_SAMPLE_MS) {
+    lastFlowMs = now;
+    uint32_t today = clk::today();
+    if (today && !timeWasValid) {
+      char iso[32];
+      clk::isoTime(iso, sizeof iso);
+      Serial.printf("[clock] time valid: %s\n", iso);
+    }
+    timeWasValid = today != 0;
+    // Roll the day / merge pending before adding this tick's flow.
+    store::markDirty(counters.tick(today));
+    updateFlow(now, today);
   }
 
-  handleSerial();
-
-  if (now - lastReportMs >= FLOW_SAMPLE_MS) {
-    float dt = (now - lastReportMs) / 1000.0f;
-    lastReportMs = now;
-
-    uint32_t pIn = readPulses(flowIn), pOut = readPulses(flowOut);
-    uint32_t dIn = pIn - flowIn.lastSnapshot, dOut = pOut - flowOut.lastSnapshot;
-    flowIn.lastSnapshot = pIn;
-    flowOut.lastSnapshot = pOut;
-
-    float galIn = pIn / K_FLOW_IN_PER_GAL, galOut = pOut / K_FLOW_OUT_PER_GAL;
-    float hzIn = dIn / dt, hzOut = dOut / dt;
-    float lpmIn = hzIn / 38.0f, lpmOut = hzOut / 38.0f;  // F = 38 * Q
-    float galWaste = max(0.0f, galIn - galOut);
-
-    uint32_t mv = median(tdsBuf, tdsFull ? TDS_SAMPLES : max(tdsIdx, 1));
-    float rawPpm = mvToPpm(mv);
-    float ppm = rawPpm * kTds;
-    float rej = constrain((1.0f - ppm / FEED_TDS_PPM) * 100.0f, 0.0f, 100.0f);
-
-    Serial.printf("IN  d=%3lu %5.1fHz %4.2fL/m tot=%7lu %7.3fgal | OUT d=%3lu %5.1fHz %4.2fL/m tot=%7lu %7.3fgal | waste=%7.3fgal\n",
-                  (unsigned long)dIn, hzIn, lpmIn, (unsigned long)pIn, galIn,
-                  (unsigned long)dOut, hzOut, lpmOut, (unsigned long)pOut, galOut, galWaste);
-    Serial.printf("TDS %4lumV raw=%6.1fppm cal=%6.1fppm rej=%5.1f%% | pins IN=%d OUT=%d\n",
-                  (unsigned long)mv, rawPpm, ppm, rej,
-                  digitalRead(PIN_FLOW_IN), digitalRead(PIN_FLOW_OUT));
-  }
+  store::loop(now);
 }

@@ -82,7 +82,8 @@ ro-system-monitor/
 │   ├── tds.{h,cpp}           # ADC sampling, median filter, ppm conversion
 │   ├── clock.{h,cpp}         # NTP, TZ, midnight rollover
 │   ├── store.{h,cpp}         # NVS persistence, batched writes
-│   ├── counters.{h,cpp}      # periods, 7-day ring buffer, filter life
+│   ├── counters.{h,cpp}      # periods, 7-day ring buffer, filter life (pure C++, host-tested)
+│   ├── net.{h,cpp}           # Wi-Fi STA, backoff, fallback AP, mDNS
 │   ├── web.{h,cpp}           # REST API + static files
 │   └── ha_mqtt.{h,cpp}       # HA MQTT discovery + state publishing
 ├── web/                      # design mockup (reference only, untouched)
@@ -254,11 +255,16 @@ Entities (`homeassistant/<component>/ro_monitor/<object>/config`):
 ### Phase 2: Core logic
 > **Model: Opus.** Counter, rollover, persistence and pre-sync edge cases are easy to get subtly wrong.
 
-- [ ] Wi-Fi STA + reconnect + fallback AP; mDNS `ro-monitor.local`
-- [ ] NTP + TZ; time-valid flag
-- [ ] Counters: all-time, 8-day bucket ring, midnight rollover, pre-sync pending bucket
-- [ ] Filter-life groups with install-date reset rule
-- [ ] NVS store with batched writes; power-cycle tests (counts survive, nothing lost beyond ~60 s)
+- [x] Wi-Fi STA + reconnect + fallback AP; mDNS `ro-monitor.local` (STA + mDNS verified on hardware; fallback AP not yet exercised)
+- [x] NTP + TZ; time-valid flag
+- [x] Counters: all-time, 8-day bucket ring, midnight rollover, pre-sync pending bucket (pure C++ in `counters.cpp`, host tests in `test/test_counters`)
+- [x] Filter-life groups with install-date reset rule
+- [x] NVS store with batched writes; reset tests (counts survive, unsaved changes < 60 s are the only loss). Tested with chip reset (RTS) and `ESP.restart()`; a real unplug test is still worth doing
+
+Notes for Phase 3:
+- The async web server runs its handlers on another task, so reads/writes of `store::counters` and `store::cal` from handlers need a mutex (or queue the change to `loop()`).
+- An install date that was never set is filled with the first synced date, the same as `countingSince`.
+- While the clock is not valid, "Today" shows only the pending bucket, and "7 days" is the stored ring plus pending.
 
 ### Phase 3: API + dashboard
 > **Model: Sonnet.** The UI port from the mockup is mostly translation and is a good fit for a Sonnet subagent.

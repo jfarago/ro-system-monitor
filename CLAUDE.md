@@ -13,6 +13,7 @@ Firmware + web dashboard for a 4-stage under-sink RO system on a Seeed XIAO ESP3
 - Build: `pio run 2>&1 | tail -20`
 - Flash: `pio run -t upload 2>&1 | tail -20`
 - Upload UI (LittleFS): `pio run -t uploadfs 2>&1 | tail -20`
+- Host unit tests (counter logic): `pio test -e native 2>&1 | tail -25`
 - Serial monitor: `pio device monitor 2>&1 | grep -v '^$' | tail -50` (or run with a timeout)
 - Always pipe build/monitor output through `tail`/`grep`.
 
