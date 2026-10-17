@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A1317">
+<title>RO Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="page">
+
+  <header class="head">
+    <div class="head-text">
+      <h1>RO Monitor</h1>
+      <div class="conn"><span id="conn-dot" class="dot dot-off"></span><span id="conn-text">Connecting…</span></div>
+    </div>
+    <button id="open-settings" class="icon-btn" aria-label="Settings" aria-haspopup="dialog">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>
+    </button>
+  </header>
+
+  <section class="card tds" aria-label="Water quality">
+    <div class="row between">
+      <h2>Product TDS</h2>
+      <span id="tds-pill" class="pill">—</span>
+    </div>
+    <div class="row between tds-main">
+      <div class="row baseline gap6">
+        <span id="tds-value" class="mono tds-num">—</span>
+        <span class="mono unit18">ppm</span>
+      </div>
+      <div class="tds-side">
+        <div class="row baseline between gap12"><span class="label12">Feed</span><span class="mono v15"><span id="tds-feed">—</span> <span class="label12">ppm</span></span></div>
+        <div class="row baseline between gap12"><span class="label12">Rejection</span><span class="mono v15"><span id="tds-rej">—</span> <span class="label12">%</span></span></div>
+      </div>
+    </div>
+    <div class="scale-wrap">
+      <div class="scale">
+        <div class="seg s1"></div><div class="seg s2"></div><div class="seg s3"></div><div class="seg s4"></div>
+        <div id="tds-marker" class="marker"></div>
+      </div>
+      <div class="scale-labels mono"><span>0</span><span>50</span><span class="row between"><span>100</span><span>200+</span></span></div>
+    </div>
+  </section>
+
+  <div class="row between section-head">
+    <h2>Water volume</h2>
+    <div class="seg-ctl" role="group" aria-label="Time period">
+      <button data-period="today" aria-pressed="true">Today</button>
+      <button data-period="week" aria-pressed="false">7 days</button>
+      <button data-period="all" aria-pressed="false">All</button>
+    </div>
+  </div>
+
+  <section class="stack" aria-label="Water volume">
+    <div class="grid2">
+      <div class="card tile">
+        <div class="row gap8 center">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#7FDBFF" aria-hidden="true"><path d="M12 2.5C12 2.5 5 10.5 5 15a7 7 0 0 0 14 0c0-4.5-7-12.5-7-12.5z"></path></svg>
+          <span class="name14">Clean RO</span>
+        </div>
+        <div class="row baseline gap6"><span id="v-clean" class="mono tile-num">—</span><span class="mono unit14">gal</span></div>
+      </div>
+      <div class="card tile">
+        <div class="row gap8 center">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E08A34" stroke-width="2.4" aria-hidden="true"><path d="M12 3.5C12 3.5 6 10.5 6 14.5a6 6 0 0 0 12 0c0-4-6-11-6-11z"></path></svg>
+          <span class="name14">Waste</span>
+        </div>
+        <div class="row baseline gap6"><span id="v-waste" class="mono tile-num">—</span><span class="mono unit14">gal</span></div>
+      </div>
+    </div>
+
+    <div class="card total">
+      <div class="row between center gap12">
+        <div class="col gap6"><span class="name14">Total</span><span class="label12">Clean + waste</span></div>
+        <div class="row baseline gap6"><span id="v-total" class="mono total-num">—</span><span class="mono unit14">gal</span></div>
+      </div>
+      <div class="bar"><div id="bar-clean" class="bar-clean"></div><div class="bar-waste"></div></div>
+      <div class="row between gap12 label12">
+        <span class="legend"><span class="sw sw-clean"></span>Clean <span id="v-clean-pct">0</span>%</span>
+        <span class="legend"><span class="sw sw-waste"></span>Waste <span id="v-waste-pct">0</span>%</span>
+      </div>
+      <div class="row between center ratio">
+        <span class="label13">Waste-to-clean ratio</span>
+        <span class="mono v15"><span id="v-ratio">0.0</span> : 1</span>
+      </div>
+    </div>
+
+    <div class="card filters" role="region" aria-label="Filter life">
+      <h2>Filter life</h2>
+      <div id="filter-pre" class="filter"></div>
+      <div id="filter-mem" class="filter filter-next"></div>
+    </div>
+  </section>
+
+  <footer><span id="since" class="foot">Counting since —</span></footer>
+</main>
+
+<div id="overlay" class="overlay" hidden>
+  <div id="dialog" class="dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="row between center gap12">
+      <h2 id="settings-title" class="dlg-title">Settings</h2>
+      <button id="close-settings" class="icon-btn close" aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
+    </div>
+
+    <fieldset>
+      <legend>Stages 1–3 · Sediment + carbon</legend>
+      <div class="grid2">
+        <label>Install date<input id="pre-date" type="date"></label>
+        <label>Rated capacity (gal)<input id="pre-rating" class="mono" type="number" inputmode="numeric" min="1"></label>
+      </div>
+    </fieldset>
+
+    <fieldset class="fs-next">
+      <legend>Stage 4 · RO membrane</legend>
+      <div class="grid2">
+        <label>Install date<input id="mem-date" type="date"></label>
+        <label>Rated capacity (gal)<input id="mem-rating" class="mono" type="number" inputmode="numeric" min="1"></label>
+      </div>
+    </fieldset>
+
+    <p class="note">Changing an install date resets that filter's gallon counter to zero.</p>
+    <p id="settings-error" class="err" role="alert" hidden></p>
+
+    <div class="grid2">
+      <button id="cancel-settings" class="btn btn-ghost">Cancel</button>
+      <button id="save-settings" class="btn btn-primary">Save</button>
+    </div>
+
+    <div class="reset-zone">
+      <div class="col gap4">
+        <h3>Water counters</h3>
+        <p class="note">Clears the clean, waste and total gallons for every period. Filter life is not affected.</p>
+      </div>
+      <button id="ask-reset" class="btn btn-danger-ghost">Reset water counters</button>
+      <div id="confirm-reset" class="confirm" role="alertdialog" aria-labelledby="reset-q" hidden>
+        <span id="reset-q">Reset all water counters? This can’t be undone.</span>
+        <div class="grid2 gap10">
+          <button id="cancel-reset" class="btn btn-sm btn-keep">Keep counters</button>
+          <button id="do-reset" class="btn btn-sm btn-danger">Yes, reset</button>
+        </div>
+      </div>
+      <span id="reset-done" class="ok" role="status" hidden>Water counters reset.</span>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

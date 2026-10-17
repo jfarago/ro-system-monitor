@@ -29,4 +29,15 @@ void saveNow();
 void wipe();                  // erase the namespace and reload defaults
 uint32_t saveCount();         // NVS writes since boot (diagnostics)
 
+// Recursive mutex guarding `counters`, `cal` and the dirty state. The web handlers run on the
+// async_tcp task, so anything touching them outside loop() must hold it (loop() holds it too).
+void lock();
+void unlock();
+struct Lock {
+  Lock() { lock(); }
+  ~Lock() { unlock(); }
+  Lock(const Lock &) = delete;
+  Lock &operator=(const Lock &) = delete;
+};
+
 }  // namespace store

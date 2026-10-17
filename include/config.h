@@ -41,5 +41,7 @@ constexpr uint32_t FLOW_ACTIVE_MS = 3000;      // "flowing" = pulses within this
 constexpr uint32_t FLOW_EVENT_END_MS = 10000;  // no pulses this long ends a flow event (triggers a save)
 constexpr uint32_t TDS_SAMPLE_MS = 40;
 constexpr int TDS_SAMPLES = 30;
+constexpr uint32_t TDS_SMOOTH_TICK_MS = 1000;  // the median feeds the moving average this often
+constexpr float TDS_SMOOTH_ALPHA = 0.1f;       // ~10 s time constant; lower = smoother, slower to react
 constexpr uint32_t SAVE_INTERVAL_MS = 60000;   // max time unsaved changes are held in RAM
 constexpr uint32_t MQTT_PUBLISH_MS = 30000;

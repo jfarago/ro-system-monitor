@@ -2,7 +2,7 @@
 
 Monitors a 4-stage under-sink reverse osmosis system with a Seeed XIAO ESP32-C3. It counts water in and out with two flow sensors, reads product TDS, tracks filter life, serves a mobile dashboard from flash at `ro-monitor.local`, and publishes to Home Assistant over MQTT.
 
-Status: Phase 2 (core logic: Wi-Fi, NTP, counters, filter life, NVS). No web UI yet; use the serial console. See [docs/PLAN.md](docs/PLAN.md) for the roadmap.
+Status: Phase 3 (REST API + web dashboard). UI dev without hardware: `python3 scripts/mock_server.py` (http://localhost:8080). See [docs/PLAN.md](docs/PLAN.md) for the roadmap.
 
 ## Wiring
 
@@ -22,7 +22,7 @@ Requires [PlatformIO](https://platformio.org/).
 cp include/secrets.example.h include/secrets.h   # then edit Wi-Fi / MQTT credentials
 pio run                  # build
 pio run -t upload        # flash firmware
-pio run -t uploadfs      # upload web UI (from Phase 3)
+pio run -t uploadfs      # upload web UI (gzips `ui/` into `data/`)
 pio device monitor       # serial at 115200
 pio test -e native       # host unit tests for the counter logic
 ```

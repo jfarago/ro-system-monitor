@@ -18,6 +18,7 @@
 #include "net.h"
 #include "store.h"
 #include "tds.h"
+#include "web.h"
 
 static Counters &counters = store::counters;
 static Calibration &cal = store::cal;
@@ -30,8 +31,10 @@ static bool timeWasValid = false;
 static uint32_t calPulsesIn = 0, calPulsesOut = 0;
 
 static bool flowing(uint32_t now) { return anyPulse && now - lastPulseMs < FLOW_ACTIVE_MS; }
+bool appFlowing() { return flowing(millis()); }  // used by web.cpp
 
 static void printStatus() {
+  store::Lock guard;
   uint32_t now = millis();
   uint32_t today = clk::today();
   char iso[32], since[12], preD[12], memD[12];
@@ -73,6 +76,7 @@ static uint32_t parseDate(const char *s) {
 static void handleCommand(String line) {
   line.trim();
   if (line.length() == 0) return;
+  store::Lock guard;
   uint32_t today = clk::today();
 
   if (line == "s") {
@@ -187,6 +191,7 @@ void setup() {
   tds::begin();
   flow::begin();
   net::begin();
+  web::begin();
   printStatus();
 }
 
@@ -198,6 +203,7 @@ void loop() {
 
   if (now - lastFlowMs >= FLOW_SAMPLE_MS) {
     lastFlowMs = now;
+    store::Lock guard;
     uint32_t today = clk::today();
     if (today && !timeWasValid) {
       char iso[32];
@@ -210,5 +216,6 @@ void loop() {
     updateFlow(now, today);
   }
 
+  store::Lock guard;
   store::loop(now);
 }

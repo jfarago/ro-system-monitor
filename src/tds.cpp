@@ -8,6 +8,11 @@ static uint32_t buf[TDS_SAMPLES];
 static int idx = 0;
 static bool full = false;
 static uint32_t lastSampleMs = 0;
+static uint32_t lastSmoothMs = 0;
+static float smoothMv = 0;  // exponential moving average of the windowed median
+static bool smoothInit = false;
+
+uint32_t medianMv();
 
 void begin() { analogSetPinAttenuation(PIN_TDS, ADC_11db); }
 
@@ -17,6 +22,13 @@ void update(uint32_t now) {
   buf[idx] = analogReadMilliVolts(PIN_TDS);
   idx = (idx + 1) % TDS_SAMPLES;
   if (idx == 0) full = true;
+
+  if (now - lastSmoothMs >= TDS_SMOOTH_TICK_MS && (full || idx > 0)) {
+    lastSmoothMs = now;
+    float mv = (float)medianMv();
+    smoothMv = smoothInit ? smoothMv + TDS_SMOOTH_ALPHA * (mv - smoothMv) : mv;
+    smoothInit = true;
+  }
 }
 
 uint32_t medianMv() {
@@ -34,7 +46,7 @@ uint32_t medianMv() {
 }
 
 float rawPpm(float waterTempC) {
-  float v = medianMv() / 1000.0f;
+  float v = (smoothInit ? smoothMv : (float)medianMv()) / 1000.0f;
   float c = v / (1.0f + 0.02f * (waterTempC - 25.0f));
   return (133.42f * c * c * c - 255.86f * c * c + 857.39f * c) * 0.5f;
 }

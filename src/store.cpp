@@ -9,6 +9,7 @@ Counters counters;
 Calibration cal;
 
 static Preferences prefs;
+static SemaphoreHandle_t mutex = xSemaphoreCreateRecursiveMutex();
 static uint8_t dirty = 0;
 static bool saveRequested = false;
 static uint32_t dirtySinceMs = 0;
@@ -97,5 +98,8 @@ void wipe() {
 }
 
 uint32_t saveCount() { return saves; }
+
+void lock() { xSemaphoreTakeRecursive(mutex, portMAX_DELAY); }
+void unlock() { xSemaphoreGiveRecursive(mutex); }
 
 }  // namespace store

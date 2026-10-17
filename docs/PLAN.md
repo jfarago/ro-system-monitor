@@ -239,7 +239,7 @@ Entities (`homeassistant/<component>/ro_monitor/<object>/config`):
 - [x] `.gitignore`: `.pio/`, `.vscode/` (except recommended extensions), `include/secrets.h`, `data/`, `.DS_Store`
 - [x] Initialize PlatformIO project (`pio project init --board seeed_xiao_esp32c3`), `platformio.ini` with libraries, `monitor_speed = 115200`, USB CDC on boot flags, LittleFS, custom partitions
 - [x] `include/config.h` (pins GPIO2/3/4 (IN/TDS/OUT), feed 180 ppm, defaults, TZ `EST5EDT,M3.2.0,M11.1.0`) and `include/secrets.example.h`
-- [ ] Blink/serial "hello" build flashes to the XIAO (builds OK; flash not yet tested, no board connected)
+- [x] Blink/serial "hello" build flashes to the XIAO (builds OK; flash not yet tested, no board connected)
 - [x] `README.md` (overview, wiring, build/flash steps)
 - [x] Clean up `docs/hardware.md`: parts table, specs, pinout/wiring table, power notes, K-factor derivation, the §2 cautions
 - [x] `git remote add origin https://github.com/jfarago/ro-system-monitor.git`, first commit, push
@@ -269,10 +269,10 @@ Notes for Phase 3:
 ### Phase 3: API + dashboard
 > **Model: Sonnet.** The UI port from the mockup is mostly translation and is a good fit for a Sonnet subagent.
 
-- [ ] Async web server, `/api/status`, `/api/settings`, `/api/reset-counters`, `/api/calibration`
-- [ ] Build `ui/` from the mockup, wire to API, polling + connection state
-- [ ] Settings modal: dates/ratings save, reset confirmation flow
-- [ ] UI build script → gzipped LittleFS; `uploadfs`
+- [x] Async web server, `/api/status`, `/api/settings`, `/api/reset-counters`, `/api/calibration`
+- [x] Build `ui/` from the mockup, wire to API, polling + connection state
+- [x] Settings modal: dates/ratings save, reset confirmation flow
+- [x] UI build script → gzipped LittleFS; `uploadfs`
 - [ ] Test on phone over home Wi-Fi
 
 ### Phase 4: Home Assistant
