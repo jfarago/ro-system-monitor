@@ -221,9 +221,9 @@ Entities (`homeassistant/<component>/ro_monitor/<object>/config`):
 ### Phase 0: Repository & project setup
 > **Model: Haiku or Sonnet.** Mechanical scaffolding.
 
-- [ ] `git init`, default branch `main`
-- [ ] Create `CLAUDE.md` (board, pin map, build/flash/uploadfs commands, repo layout, pointer to `docs/PLAN.md`, the "waste = in − out" and "membrane counts total" rules, "don't read `web/vendor/` or `web/support.js`", "pipe build/monitor output through `tail`/`grep`")
-- [ ] Create `.claude/settings.json` with deny rules so these large minified files are never read:
+- [x] `git init`, default branch `main`
+- [x] Create `CLAUDE.md` (board, pin map, build/flash/uploadfs commands, repo layout, pointer to `docs/PLAN.md`, the "waste = in − out" and "membrane counts total" rules, "don't read `web/vendor/` or `web/support.js`", "pipe build/monitor output through `tail`/`grep`")
+- [x] Create `.claude/settings.json` with deny rules so these large minified files are never read:
   ```json
   {
     "permissions": {
@@ -235,13 +235,13 @@ Entities (`homeassistant/<component>/ro_monitor/<object>/config`):
     }
   }
   ```
-- [ ] `.gitignore`: `.pio/`, `.vscode/` (except recommended extensions), `include/secrets.h`, `data/`, `.DS_Store`
-- [ ] Initialize PlatformIO project (`pio project init --board seeed_xiao_esp32c3`), `platformio.ini` with libraries, `monitor_speed = 115200`, USB CDC on boot flags, LittleFS, custom partitions
-- [ ] `include/config.h` (pins GPIO2/3/4, feed 180 ppm, defaults, TZ `EST5EDT,M3.2.0,M11.1.0`) and `include/secrets.example.h`
-- [ ] Blink/serial "hello" build flashes to the XIAO
-- [ ] `README.md` (overview, wiring, build/flash steps)
-- [ ] Clean up `docs/hardware.md`: parts table, specs, pinout/wiring table, power notes, K-factor derivation, the §2 cautions
-- [ ] `git remote add origin https://github.com/jfarago/ro-system-monitor.git`, first commit, push
+- [x] `.gitignore`: `.pio/`, `.vscode/` (except recommended extensions), `include/secrets.h`, `data/`, `.DS_Store`
+- [x] Initialize PlatformIO project (`pio project init --board seeed_xiao_esp32c3`), `platformio.ini` with libraries, `monitor_speed = 115200`, USB CDC on boot flags, LittleFS, custom partitions
+- [x] `include/config.h` (pins GPIO2/3/4, feed 180 ppm, defaults, TZ `EST5EDT,M3.2.0,M11.1.0`) and `include/secrets.example.h`
+- [ ] Blink/serial "hello" build flashes to the XIAO (builds OK; flash not yet tested, no board connected)
+- [x] `README.md` (overview, wiring, build/flash steps)
+- [x] Clean up `docs/hardware.md`: parts table, specs, pinout/wiring table, power notes, K-factor derivation, the §2 cautions
+- [x] `git remote add origin https://github.com/jfarago/ro-system-monitor.git`, first commit, push
 
 ### Phase 1: Sensor bring-up (serial output only)
 > **Model: Sonnet.** Switch to Opus if readings act strangely and need deeper debugging.
