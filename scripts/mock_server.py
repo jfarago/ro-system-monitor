@@ -25,7 +25,7 @@ def status():
         "time": time.strftime("%Y-%m-%dT%H:%M:%S-04:00"), "timeValid": True,
         "tds": {"product": 12, "feed": 180, "rejection": 93.3},
         "volume": v, "countingSince": "2026-01-15", "filters": state["filters"],
-        "flowing": False, "uptime": int(time.time() - START), "rssi": -61,
+        "flowing": False, "uptime": int(time.time() - START), "rssi": -61, "battery": {"volts": 3.87},
     }
 
 

@@ -8,6 +8,7 @@
 #include "net.h"
 #include "ota.h"
 #include "store.h"
+#include "battery.h"
 #include "tds.h"
 
 bool appFlowing();  // main.cpp
@@ -67,6 +68,8 @@ static void sendStatus(AsyncWebServerRequest *req) {
   doc["flowing"] = appFlowing();
   doc["uptime"] = millis() / 1000;
   doc["rssi"] = net::rssi();
+  if (battery::present()) doc["battery"]["volts"] = roundf(battery::volts() * 100.0f) / 100.0f;
+  else doc["battery"] = nullptr;
 
   String out;
   serializeJson(doc, out);

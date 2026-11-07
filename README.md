@@ -1,6 +1,6 @@
 # RO System Monitor
 
-Monitors a 4-stage under-sink reverse osmosis system with a Seeed XIAO ESP32-C3. It counts water in and out with two flow sensors (Today, 7 days, 30 days and all-time totals), reads product TDS, tracks filter life, and serves a mobile dashboard from flash at `ro-monitor.local`. Publishes to Home Assistant over MQTT discovery ([docs/home-assistant.md](docs/home-assistant.md)).
+Monitors a 4-stage under-sink reverse osmosis system with a Seeed XIAO ESP32-C6. It counts water in and out with two flow sensors (Today, 7 days, 30 days and all-time totals), reads product TDS, tracks filter life, and serves a mobile dashboard from flash at `ro-monitor.local`. Publishes to Home Assistant over MQTT discovery ([docs/home-assistant.md](docs/home-assistant.md)).
 
 <img src="docs/app-screenshot.png" alt="RO Monitor dashboard" width="320">
 
@@ -8,13 +8,13 @@ Status: Phase 4 (Home Assistant MQTT; firmware done, HA-side verification pendin
 
 ## Wiring
 
-| Part | Wire | XIAO ESP32-C3 |
+| Part | Wire | XIAO ESP32-C6 |
 |---|---|---|
-| Flow sensor IN | red / black / yellow | 5 V / GND / GPIO2 (D0) |
-| TDS module | VCC / GND / signal | 3V3 / GND / GPIO3 (D1) |
-| Flow sensor OUT | red / black / yellow | 5 V / GND / GPIO4 (D2) |
+| Flow sensor IN | red / black / yellow | 5 V / GND / GPIO0 (D0) |
+| TDS module | VCC / GND / signal | 3V3 / GND / GPIO1 (D1) |
+| Flow sensor OUT | red / black / yellow | 5 V / GND / GPIO2 (D2) |
 
-The flow sensors may output 5 V pulses, which the ESP32-C3 cannot tolerate. Measure the signal wire first and add a divider if needed (see [docs/hardware.md](docs/hardware.md)).
+The flow sensors may output 5 V pulses, which the ESP32-C6 cannot tolerate. Measure the signal wire first and add a divider if needed (see [docs/hardware.md](docs/hardware.md)).
 
 ## Build and flash
 
@@ -28,6 +28,40 @@ pio run -t uploadfs      # upload web UI (build step gzips `ui/` into `data/`)
 pio device monitor       # serial at 115200
 pio test -e native       # host unit tests for the counter logic
 ```
+
+### Production vs. dev build
+
+Two firmware variants let a development board share the network with the real monitor. Both use the same `include/secrets.h`.
+
+| | Production (`seeed_xiao_esp32c6`, default) | Dev (`dev`) |
+|---|---|---|
+| Hostname | `ro-monitor.local` | `ro-monitor-dev.local` |
+| Fallback AP | `RO-Monitor-Setup` | `RO-Monitor-Dev-Setup` |
+| MQTT / Home Assistant | enabled | **disabled**, never connects to the broker |
+| OTA env | `ota` | `dev_ota` |
+
+The dev build is selected by the `DEV_BUILD` flag (see `[env:dev]` in `platformio.ini`). Because MQTT is off, the dev board can't collide with the real device's client ID or Home Assistant entities.
+
+Flash over USB (add `--upload-port /dev/cu.usbmodemXXXX` if both boards are plugged in; `pio device list` shows the ports):
+
+```sh
+# production board
+pio run -t upload
+pio run -t uploadfs
+
+# dev board
+pio run -e dev -t upload
+pio run -e dev -t uploadfs
+```
+
+Flash over Wi-Fi after the first USB flash (needs `OTA_PASSWORD`, see below):
+
+```sh
+pio run -e ota -t upload        # production, ro-monitor.local
+pio run -e dev_ota -t upload    # dev, ro-monitor-dev.local
+```
+
+Add `-t uploadfs` to either to push the UI. Always pass `-e` explicitly when flashing a dev board, since plain `pio run -t upload` builds production.
 
 ### Wireless updates (OTA)
 

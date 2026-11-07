@@ -1,10 +1,21 @@
 #pragma once
 #include <stdint.h>
 
-// Pins (XIAO ESP32-C3: GPIO2 = D0, GPIO3 = D1, GPIO4 = D2)
-constexpr int PIN_FLOW_IN = 2;   // water IN (total feed); strapping pin, must be high at boot
-constexpr int PIN_TDS = 3;       // product TDS probe, ADC1_CH3
-constexpr int PIN_FLOW_OUT = 4;  // water OUT (clean RO)
+// Pins (XIAO ESP32-C6: GPIO0 = D0, GPIO1 = D1, GPIO2 = D2)
+constexpr int PIN_FLOW_IN = 0;   // water IN (total feed)
+constexpr int PIN_TDS = 1;       // product TDS probe, ADC1_CH1
+constexpr int PIN_FLOW_OUT = 2;  // water OUT (clean RO)
+constexpr int PIN_VBAT = 6;      // battery divider midpoint, GPIO6 (MTCK pad on the back), ADC1_CH6
+
+// Battery: BAT+ -> 220k -> PIN_VBAT -> 220k -> GND (ratio 2). A 100 nF cap from PIN_VBAT to GND
+// steadies the ADC reading, since 110k of source impedance is high for the sample-and-hold.
+constexpr float VBAT_DIVIDER = 2.0f;
+constexpr float VBAT_CAL = 1.0099f;           // 4.10 V multimeter / 4.06 V reading; re-tune if it drifts
+constexpr int VBAT_SAMPLES = 16;               // ADC reads averaged per sample
+constexpr uint32_t VBAT_SAMPLE_MS = 1000;
+constexpr float VBAT_SMOOTH_ALPHA = 0.2f;
+constexpr uint32_t VBAT_LOG_MS = 60000;        // serial log interval
+constexpr float VBAT_PRESENT_MIN_V = 2.0f;     // below this, treat as no battery connected
 
 // Flow calibration: F(Hz) = 38 * Q(L/min) -> 2280 pulses/L
 constexpr float K_FLOW_IN_PER_GAL = 8631.0f;
@@ -27,8 +38,13 @@ constexpr float MEMBRANE_RATING_GAL = 3000.0f;
 #define NTP_SERVER_2 "time.google.com"
 
 // Network
+#ifdef DEV_BUILD  // second board on the same network (pio -e dev / -e dev_ota)
+#define MDNS_HOSTNAME "ro-monitor-dev"
+#define FALLBACK_AP_SSID "RO-Monitor-Dev-Setup"
+#else
 #define MDNS_HOSTNAME "ro-monitor"
 #define FALLBACK_AP_SSID "RO-Monitor-Setup"
+#endif
 constexpr uint32_t WIFI_FALLBACK_AP_AFTER_MS = 120000;
 
 // Fallback AP password: define FALLBACK_AP_PASSWORD (8+ chars) in secrets.h for WPA2; open otherwise.
