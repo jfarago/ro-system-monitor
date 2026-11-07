@@ -5,6 +5,17 @@
 constexpr int PIN_FLOW_IN = 0;   // water IN (total feed)
 constexpr int PIN_TDS = 1;       // product TDS probe, ADC1_CH1
 constexpr int PIN_FLOW_OUT = 2;  // water OUT (clean RO)
+constexpr int PIN_VBAT = 6;      // battery divider midpoint, GPIO6 (MTCK pad on the back), ADC1_CH6
+
+// Battery: BAT+ -> 220k -> PIN_VBAT -> 220k -> GND (ratio 2). A 100 nF cap from PIN_VBAT to GND
+// steadies the ADC reading, since 110k of source impedance is high for the sample-and-hold.
+constexpr float VBAT_DIVIDER = 2.0f;
+constexpr float VBAT_CAL = 1.0099f;           // 4.10 V multimeter / 4.06 V reading; re-tune if it drifts
+constexpr int VBAT_SAMPLES = 16;               // ADC reads averaged per sample
+constexpr uint32_t VBAT_SAMPLE_MS = 1000;
+constexpr float VBAT_SMOOTH_ALPHA = 0.2f;
+constexpr uint32_t VBAT_LOG_MS = 60000;        // serial log interval
+constexpr float VBAT_PRESENT_MIN_V = 2.0f;     // below this, treat as no battery connected
 
 // Flow calibration: F(Hz) = 38 * Q(L/min) -> 2280 pulses/L
 constexpr float K_FLOW_IN_PER_GAL = 8631.0f;

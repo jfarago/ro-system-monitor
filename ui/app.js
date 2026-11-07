@@ -118,6 +118,9 @@ function render() {
   renderFilter($('filter-pre'), 'Sediment + carbon', 'Stages 1–3 · counts total water', f.prefilter);
   renderFilter($('filter-mem'), 'RO membrane',
     'Stage 4 · counts ' + (f.membrane.counts === 'clean' ? 'clean' : 'total') + ' water', f.membrane);
+  const bat = $('battery');
+  bat.hidden = !status.battery;
+  if (status.battery) $('battery-v').textContent = fmt(status.battery.volts, 2);
   $('since').textContent = !status.timeValid ? 'Time not synced'
     : status.countingSince ? 'Counting since ' + pretty(status.countingSince) : 'Counting since time sync';
 }

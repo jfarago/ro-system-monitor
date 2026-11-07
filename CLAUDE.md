@@ -8,6 +8,7 @@ Firmware + web dashboard for a 4-stage under-sink RO system on a Seeed XIAO ESP3
 | GPIO0 (D0) | Flow sensor, water IN (total feed) |
 | GPIO1 (D1) | TDS probe (product water), ADC1_CH1. Feed TDS is hardcoded (`FEED_TDS_PPM`, 180) |
 | GPIO2 (D2) | Flow sensor, water OUT (clean RO) |
+| GPIO6 (MTCK pad, back of board) | Battery voltage, ADC1_CH6, via 2x 220k divider (ratio 2) + 100 nF to GND |
 
 C6 notes: avoid GPIO3 (RF switch power) and GPIO14 (antenna select); GPIO4/5/8/9/15 are strapping pins. Board docs: `docs/xiao-esp32c6.md`.
 

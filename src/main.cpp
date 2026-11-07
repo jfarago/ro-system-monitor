@@ -14,6 +14,7 @@
 //   save | reboot | hang | wipe yes   force NVS save / restart / erase all stored data
 #include <Arduino.h>
 #include <esp_task_wdt.h>
+#include "battery.h"
 #include "clock.h"
 #include "config.h"
 #include "counters.h"
@@ -216,6 +217,7 @@ void setup() {
   clk::begin();
   store::begin();
   tds::begin();
+  battery::begin();
   flow::begin();
   net::begin();
   web::begin();
@@ -236,6 +238,7 @@ void setup() {
 void loop() {
   uint32_t now = millis();
   tds::update(now);
+  battery::update(now);
   net::loop(now);
   ha::loop(now);
   ota::loop();
