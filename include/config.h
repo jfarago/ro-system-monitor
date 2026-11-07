@@ -1,10 +1,10 @@
 #pragma once
 #include <stdint.h>
 
-// Pins (XIAO ESP32-C3: GPIO2 = D0, GPIO3 = D1, GPIO4 = D2)
-constexpr int PIN_FLOW_IN = 2;   // water IN (total feed); strapping pin, must be high at boot
-constexpr int PIN_TDS = 3;       // product TDS probe, ADC1_CH3
-constexpr int PIN_FLOW_OUT = 4;  // water OUT (clean RO)
+// Pins (XIAO ESP32-C6: GPIO0 = D0, GPIO1 = D1, GPIO2 = D2)
+constexpr int PIN_FLOW_IN = 0;   // water IN (total feed)
+constexpr int PIN_TDS = 1;       // product TDS probe, ADC1_CH1
+constexpr int PIN_FLOW_OUT = 2;  // water OUT (clean RO)
 
 // Flow calibration: F(Hz) = 38 * Q(L/min) -> 2280 pulses/L
 constexpr float K_FLOW_IN_PER_GAL = 8631.0f;
@@ -27,8 +27,13 @@ constexpr float MEMBRANE_RATING_GAL = 3000.0f;
 #define NTP_SERVER_2 "time.google.com"
 
 // Network
+#ifdef DEV_BUILD  // second board on the same network (pio -e dev / -e dev_ota)
+#define MDNS_HOSTNAME "ro-monitor-dev"
+#define FALLBACK_AP_SSID "RO-Monitor-Dev-Setup"
+#else
 #define MDNS_HOSTNAME "ro-monitor"
 #define FALLBACK_AP_SSID "RO-Monitor-Setup"
+#endif
 constexpr uint32_t WIFI_FALLBACK_AP_AFTER_MS = 120000;
 
 // Fallback AP password: define FALLBACK_AP_PASSWORD (8+ chars) in secrets.h for WPA2; open otherwise.

@@ -223,7 +223,13 @@ void setup() {
   printStatus();
 
   // Hardware-backed task watchdog on loop(): a hang reboots the board. Counting resumes from NVS.
-  esp_task_wdt_init(WDT_TIMEOUT_S, true);
+  // Arduino core 3.x already initialises the TWDT at boot, so reconfigure it rather than init.
+  esp_task_wdt_config_t wdtCfg = {
+      .timeout_ms = WDT_TIMEOUT_S * 1000,
+      .idle_core_mask = 0,
+      .trigger_panic = true,
+  };
+  esp_task_wdt_reconfigure(&wdtCfg);
   enableLoopWDT();
 }
 

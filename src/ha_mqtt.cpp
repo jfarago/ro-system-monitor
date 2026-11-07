@@ -170,7 +170,7 @@ static void publishDiscovery(const Entity &e) {
   dev["identifiers"].to<JsonArray>().add("ro_monitor");
   dev["name"] = "RO Monitor";
   dev["manufacturer"] = "DIY";
-  dev["model"] = "XIAO ESP32-C3 RO monitor";
+  dev["model"] = "XIAO ESP32-C6 RO monitor";
   dev["configuration_url"] = "http://" MDNS_HOSTNAME ".local";
 
   static char buf[MQTT_BUFFER_BYTES];
@@ -199,6 +199,10 @@ static void tryConnect(uint32_t now) {
 }
 
 void begin() {
+#ifdef DEV_BUILD
+  Serial.println("[mqtt] disabled in dev build");
+  return;
+#endif
   mqtt.setServer(MQTT_HOST, MQTT_PORT);
   mqtt.setBufferSize(MQTT_BUFFER_BYTES);
   mqtt.setSocketTimeout(3);  // keeps a dead broker from stalling loop() for the 15 s default
@@ -206,6 +210,9 @@ void begin() {
 }
 
 void loop(uint32_t now) {
+#ifdef DEV_BUILD
+  return;  // dev board shares the network with the real one: never touch the broker / HA
+#endif
   if (!net::connected()) {
     if (mqtt.connected()) mqtt.disconnect();
     discoveryIdx = -1;

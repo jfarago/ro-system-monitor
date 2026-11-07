@@ -1,13 +1,15 @@
 # RO System Monitor
 
-Firmware + web dashboard for a 4-stage under-sink RO system on a Seeed XIAO ESP32-C3 (PlatformIO, Arduino framework). Full plan, decisions and phase task list: `docs/PLAN.md`. Hardware: `docs/hardware.md`.
+Firmware + web dashboard for a 4-stage under-sink RO system on a Seeed XIAO ESP32-C6 (PlatformIO, Arduino framework). Full plan, decisions and phase task list: `docs/PLAN.md`. Hardware: `docs/hardware.md`.
 
 ## Pin map
 | Pin | Function |
 |---|---|
-| GPIO2 | Flow sensor, water IN (total feed). Strapping pin: must be high at boot |
-| GPIO3 | TDS probe (product water), ADC1_CH3. Feed TDS is hardcoded (`FEED_TDS_PPM`, 180) |
-| GPIO4 | Flow sensor, water OUT (clean RO) |
+| GPIO0 (D0) | Flow sensor, water IN (total feed) |
+| GPIO1 (D1) | TDS probe (product water), ADC1_CH1. Feed TDS is hardcoded (`FEED_TDS_PPM`, 180) |
+| GPIO2 (D2) | Flow sensor, water OUT (clean RO) |
+
+C6 notes: avoid GPIO3 (RF switch power) and GPIO14 (antenna select); GPIO4/5/8/9/15 are strapping pins. Board docs: `docs/xiao-esp32c6.md`.
 
 ## Commands
 - Build: `pio run 2>&1 | tail -20`
@@ -22,7 +24,7 @@ Firmware + web dashboard for a 4-stage under-sink RO system on a Seeed XIAO ESP3
 `src/` firmware, `include/config.h` pins/defaults, `include/secrets.h` (gitignored, copy from `secrets.example.h`), `ui/` production dashboard (vanilla HTML/CSS/JS), `scripts/` (`build_ui.py` gzips `ui/` into `data/` on every build; `mock_server.py` serves `ui/` with fake data at localhost:8080), `data/` generated gzipped UI (gitignored), `test/` host unit tests, `web/` design mockup (reference only), `docs/`.
 
 ## Rules
-- **Waste = in − out** (GPIO2 minus GPIO4), clamped at >= 0. Total = in, clean = out.
+- **Waste = in − out** (GPIO0 minus GPIO2), clamped at >= 0. Total = in, clean = out.
 - **Membrane counter counts total water** (same as prefilters). Switch: `MEMBRANE_COUNTS_TOTAL` in `config.h`.
 - Do not read `web/vendor/` or `web/support.js` (large, minified; also deny-listed in `.claude/settings.json`). `web/Main.dc.html` is the design reference.
 - Water periods: Today, 7 days, 30 days (ring of `NUM_DAYS` = 30 buckets), All. Changing the `DaysState` layout needs a version bump plus a migration so stored history survives.

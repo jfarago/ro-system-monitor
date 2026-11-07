@@ -4,7 +4,7 @@
 
 | Part | Qty | Link |
 |---|---|---|
-| Seeed XIAO ESP32-C3 | 1 | |
+| Seeed XIAO ESP32-C6 | 1 | |
 | Gredia water flow sensor | 2 | [Amazon](https://www.amazon.com/dp/B07RD4JXLY) |
 | Keyestudio analog TDS meter | 1 | [Amazon](https://www.amazon.com/dp/B08DGLY3J2) |
 
@@ -26,11 +26,11 @@
 
 ## Wiring
 
-| Signal | Sensor wire | ESP32-C3 pin |
+| Signal | Sensor wire | ESP32-C6 pin |
 |---|---|---|
-| Flow IN (total feed) | yellow | GPIO2 (D0) |
-| TDS (product water) | signal | GPIO3 (D1) |
-| Flow OUT (clean RO) | yellow | GPIO4 (D2) |
+| Flow IN (total feed) | yellow | GPIO0 (D0) |
+| TDS (product water) | signal | GPIO1 (D1) |
+| Flow OUT (clean RO) | yellow | GPIO2 (D2) |
 
 ## Power
 
@@ -43,9 +43,9 @@ F = 38 × Q, with Q in L/min, so pulses per litre = 38 × 60 = **2,280**. At 3.7
 
 ## Cautions
 
-1. **Signal voltage.** The sensors run at 5 V. If the signal wire is push-pull it outputs 5 V pulses, and the ESP32-C3 GPIOs are not 5 V tolerant. With no water flowing, measure the yellow wire: ~5 V means add a divider (e.g. 10 kΩ / 20 kΩ) or level shifter; floating or 0 V (open collector) means use the internal pull-up to 3.3 V.
-2. **GPIO2 is a strapping pin** and must be high at boot. If the board fails to boot or flash with the sensor attached, add an external pull-up or move the sensor to D6/D7 (avoid GPIO8 and GPIO9).
+1. **Signal voltage.** The sensors run at 5 V. If the signal wire is push-pull it outputs 5 V pulses, and the ESP32-C6 GPIOs are not 5 V tolerant. With no water flowing, measure the yellow wire: ~5 V means add a divider (e.g. 10 kΩ / 20 kΩ) or level shifter; floating or 0 V (open collector) means use the internal pull-up to 3.3 V.
+2. **C6 pin restrictions.** D0/D1/D2 (GPIO0/1/2) are not strapping pins. Avoid GPIO3 (RF switch power) and GPIO14 (antenna select), and the strapping pins GPIO4/5/8/9/15. See [xiao-esp32c6.md](xiao-esp32c6.md).
 3. **Flow range.** The OUT sensor is after the storage tank and sees faucet flow (~1–2 L/min), within its range.
 4. **Tank timing.** Water goes IN while the tank fills and OUT when the faucet runs, so waste (in − out) is only accurate over longer windows.
-5. **TDS ADC.** Use `analogReadMilliVolts()` at 11 dB attenuation. GPIO3 (ADC1) works with Wi-Fi on.
+5. **TDS ADC.** Use `analogReadMilliVolts()` at 11 dB attenuation. GPIO1 (ADC1) works with Wi-Fi on.
 6. **No temperature sensor.** TDS assumes 25 °C unless a fixed temperature is configured.
